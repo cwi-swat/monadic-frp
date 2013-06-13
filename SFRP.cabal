@@ -1,0 +1,11 @@
+Name:                symmetric-frp-example
+Version:             0.6
+Description:         Symmetric FRP Example
+License:             PublicDomain
+Author:              Atze van der Ploeg
+Maintainer:          ploeg@cwi.nl
+Build-Type:          Simple
+Cabal-Version:       >=1.2
+Executable DrawProg
+  Main-is:           Main.hs
+  Build-Depends:     base >= 3 && < 5, SDL >= 0.6.0, mtl >= 2.0.0.0, transformers >= 0.2.0.0, containers
