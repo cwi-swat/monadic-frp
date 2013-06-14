@@ -19,5 +19,6 @@ The tabs are controlled by mouse gestures: a mouse gesture is holding down the r
  * Mouse gesture left is switch to tab on the right (this makes sense when making the movement)
  * Mouse gesture right is switch to tab on the left (this makes sense when making the movement)
 
-
 Tab actions are super awesomely animated! 
+
+At the start there is only one tab, so the only tab action that is possible is to duplicate it.
