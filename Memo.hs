@@ -1,4 +1,4 @@
-
+-- | Simple memoization function
 module Memo where
 
 import System.IO.Unsafe
@@ -8,6 +8,7 @@ import Data.Maybe
 import System.Mem.Weak
 import Debug.Trace
 
+-- | Give a memoized version of the argument function.
 memo :: Ord a => (a -> b) -> (a -> b)
 
 memo f = (\x -> unsafePerformIO (lookup x))

@@ -5,6 +5,7 @@ import Data.Set hiding (map,filter,foldl)
 import qualified Data.Set as Set
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl)
 import Data.Maybe
+import qualified Memo as Memo
 
 
 
@@ -241,5 +242,20 @@ iparList l = rl ([] :| hold) l >> return () where
                         Done (e :| es)  -> rl (cons e t) es
                         _               -> t 
                         
+
                                  
+-- * Memoization
+
+-- | Memoize the continuation function of the reactive computation, and the continuation function of all next states.
+memo :: Ord e => React e a -> React e a
+memo (Await r c) = Await r (Memo.memo (memo . c))
+memo (Done a)    = Done a
+
+-- | Memoize the reactive computation of the initialized signal, and memoize the signal computation of the tail (if any).
+memoSig :: Ord e => Sig e a b -> Sig e a b
+memoSig (Sig l) = Sig (memo (fmap imemoSig l))
+
+imemoSig (h :| t)  = h :| memoSig t
+imemoSig (End a)   =  End a
+
 
