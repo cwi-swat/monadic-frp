@@ -1,3 +1,5 @@
+{-# LANGUAGE DoAndIfThenElse #-}
+
 -- | Tabbed boxes variant of the paper example.
 -- Tabs are controlled by mouse gestures: a mouse gesture is holding down the right button and moving left, right, up or down and then releasing the button
 --
@@ -41,11 +43,10 @@ gesture = do  p1 <- ensure (mousePos `at` rightClick)
               r <- before (sleep 0.2) rightUp
               if not r 
               then gesture 
-              else 
-               do mp2 <- mousePos `at` rightUp
-                  case mp2 of
-                    Just p2 -> return (gestureType (p2 -. p1))
-                    Nothing -> gesture
+              else do  mp2 <- mousePos `at` rightUp
+                       case mp2 of
+                        Just p2 -> return (gestureType (p2 -. p1))
+                        Nothing -> gesture
 
 
 
