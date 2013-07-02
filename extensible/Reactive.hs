@@ -1,11 +1,10 @@
 {-# LANGUAGE TypeFamilies,NoMonomorphismRestriction,OverlappingInstances,FlexibleInstances,FunctionalDependencies,MultiParamTypeClasses,GADTs, TypeOperators,FlexibleContexts  #-}
 
-module DynMap where
+module Reactive where
 
 
 import HMap
-import Control.Monad.Reader
-import Control.Monad.Trans
+
 import qualified Data.Set as Set
 import Prelude hiding (lookup)
 
@@ -120,6 +119,28 @@ mm = exper (MouseMove :? Neq 3)
 
 done (Done a) = Just a
 done _        = Nothing
+interpret :: Monad m =>
+     (HList PredsOf ns -> m (HList ValOf ns)) -> 
+     React ns a -> m a
+interpret p (Done a)     = return a
+interpret p (Await e c)  = p e >>= interpret p . c
+
+-- | A signal computation is a reactive computation of an initialized signal
+newtype  Sig      e a b     =  Sig (React e (ISig e a b)) 
+-- | An initialized signal 
+data     ISig     e a b     =  a :| (Sig e a b) 
+                            |  End b
+
+interpretSig
+  :: Monad m =>
+     (HList PredsOf ns -> m (HList ValOf ns))
+     -> (t -> m a) -> Sig ns t b -> m b
+interpretSig p d (Sig s) = 
+  do  l <- interpret p s
+      case l of
+        h :| t  ->  d h >> interpretSig p d t
+        End a   -> return a
+
 
 type RState ns e = (React ns e, HList ValOf ns)
 
@@ -145,42 +166,5 @@ getR = RStateM (\(r,vs) -> return ((r,vs), done r))
 put :: Monad m => HList ValOf ns -> RStateM ns m i ()
 put a = RStateM (\(r,_) -> return ((r,a),()))
 
-{--
-dynlet
-  :: MonadReader (HList Assign t) m =>
-     Assign a -> ReaderT (HList Assign (Cons a t)) m b -> m b
-dynlet v a = do l <- ask
-                let l' = v :& l
-                runReaderT a l'
-
-dynstart a = runReaderT a X 
-
-give :: (Has b b1, MonadReader (HList Assign b1) m) => b -> m (TypeOf b)
-give n = ask >>= (\s ->
-         let _ := v = lookupG n s in
-         return v)
-
-
-
-
-
-test = dynlet (MouseMove := 3) $
-         dynlet (MouseOver := False) $
-           (give MouseOver)
-
---}
-
-{--
-
-toDynMap :: HList n a -> DynMap n
-toDynMap X = M.empty
-toDynMap (n := a :& t) = M.singleton n (toDyn a) `M.union` (toDynMap t)
-
-dlets l a = do rest <- get 
-               let s = toDynmap l `M.union` rest
-               evalStateT s 
-
-
---}
 
 
