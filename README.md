@@ -22,3 +22,12 @@ The tabs are controlled by mouse gestures: a mouse gesture is holding down the r
 Tab actions are super awesomely animated! 
 
 At the start there is only one tab, so the only tab action that is possible is to duplicate it.
+
+The code for :
+  * the library is in Control/SFRP.hs
+  * SDL interpreter is SDLSFRP.hs
+  * the drawing program in the paper is in PaperExample.hs
+  * the tabbed drawing program mentioned in the paper is in TabbedBoxes.hs
+  
+The code in extensible/ is work in progress on a new version based on heterogenous lists
+
