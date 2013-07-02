@@ -45,11 +45,16 @@ interpretBoxes (x,y) r =
 upStates = forever upState
 
 upState :: SStateM SDLVars a r (StateT Time IO) ()
-upState = do prevt <- lift get
+upState = do 
+             prevt <- lift get
+             l2 $ print (show prevt)
              t <- l2 curTime
+             l2 $ print "Jalllooo"
              let dt = prevt - t
+             
              ps <- getPred Dt
              let mdt = maxTime ps
+             l2 $ print (show mdt)
              if mdt < dt 
              then
               do s <- sget
@@ -59,14 +64,14 @@ upState = do prevt <- lift get
               do evs <- l2 getSDLEvs
                  s <- sget
                  let s'  = foldl handleEv s evs
-                 let s'' = modv Dt (const dt) s
+                 let s'' = modv Dt (const dt) s'
                  sput s''
                  lift (put t)
   where l2 = lift . lift
              
 
 maxTime (PredsOf ts) = maximum $ mapFilter fromEq (elems ts)
-  where fromEq (_ :? Eq n) = Just n
+  where fromEq (_ :? Leq n) = Just n
         fromEq _      = Nothing
 
 mapFilter :: (a -> Maybe b) -> [a] -> [b]

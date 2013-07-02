@@ -23,7 +23,6 @@ getColor s c =
   where con d = round ( (d c) * 255.0)
 
 
-
 draw :: Surface -> [Box] -> IO ()
 draw s [] = return ()
 draw s ((Box r c):t) =

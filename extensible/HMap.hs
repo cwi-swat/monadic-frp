@@ -4,6 +4,7 @@
 module HMap where
 
 import Prelude hiding (lookup)
+import Debug.Trace
 
 
 
@@ -12,6 +13,7 @@ data Empty
 data Cons h t 
 
 
+infixr 5 :
 
 data HList p a where
   X :: HList p Empty
@@ -28,8 +30,9 @@ instance Has n (Cons n t)  where
   modify f (v :& t) = f v :& t
 
 instance Has n t => Has n (Cons b t)  where
-  lookup a (_ :& t) = lookup a t
+  lookup a (_ :& t) = trace "looking" $ lookup a t
   modify f (h :& t) = h :& (modify f t)
+
 
 class HasDefault p where
   def :: p a
