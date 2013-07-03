@@ -1,7 +1,6 @@
 {-# LANGUAGE  TupleSections, ViewPatterns #-}
 
 module Boxes where
-
 import Graphics.UI.SDL hiding (update,Rect,Color,Event)
 import qualified Graphics.UI.SDL as SDL
 type Point     = (Double,Double) -- in pixels
@@ -21,6 +20,7 @@ getColor s c =
      let fmt = surfaceGetPixelFormat s in
      mapRGB fmt (con r) (con g) (con b)
   where con d = round ( (d c) * 255.0)
+
 
 
 draw :: Surface -> [Box] -> IO ()

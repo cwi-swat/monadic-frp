@@ -1,156 +1,76 @@
-{-# LANGUAGE TupleSections, ViewPatterns, TypeFamilies,NoMonomorphismRestriction,OverlappingInstances,FlexibleInstances,FunctionalDependencies,MultiParamTypeClasses,GADTs, TypeOperators,FlexibleContexts  #-}
+{-# LANGUAGE UndecidableInstances,TupleSections, ViewPatterns, TypeFamilies,NoMonomorphismRestriction,OverlappingInstances,FlexibleInstances,FunctionalDependencies,MultiParamTypeClasses,GADTs, TypeOperators,FlexibleContexts  #-}
 
 module Reactive where
 
 import HMap
 import Data.Maybe
 import Data.Set hiding (map,filter,foldl)
+import qualified Data.Set as Set
 import Prelude hiding (lookup,null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl,mod,all)
 import Control.Monad.Trans
-import Debug.Trace
-
-type family TypeOf a :: *
-
-mod' :: Has n e =>  n -> (ValOf n -> ValOf n) -> HList ValOf e -> HList ValOf e
-mod' n f l = modify f l
-
-modv n f l = mod' n (\(Val x) -> Val (f x)) l
-
-newtype ValOf a = Val (TypeOf a) 
 
 
-data Predicate a where
-  Any :: Predicate a
-  Neq :: Ord a => a -> Predicate a
-  Leq :: Ord a => a -> Predicate a
-  DontCare :: Predicate a
-
-instance Ord (Predicate a) where
-  a `compare` b | cmpMajor /= EQ = cmpMajor
-                | otherwise      = compareArgs a b
-   where
-   cmpMajor = toNum a `compare` toNum b
-   compareArgs (Neq a) (Neq b) = a `compare` b
-   compareArgs (Leq a) (Leq b) = a `compare` b
-   toNum Any = 0
-   toNum (Neq _) = 1
-   toNum (Leq _) = 2
-   toNum DontCare = 3
-
-instance Eq (Predicate a) where
-  a == b = a `compare` b == EQ
-
-
-data PredOf n = n :? Predicate (TypeOf n)
-
-instance Ord (PredOf n) where
-  (_ :? p) `compare` (_ :? q) = p `compare` q
-
-instance Eq (PredOf n) where a == b = a `compare` b == EQ
-
-newtype PredsOf n = PredsOf (Set (PredOf n))
-
-unionPred (PredsOf a) (PredsOf b) = PredsOf (a `union` b)
-
-
-class Union a where
-  unionps :: HList PredsOf a -> HList PredsOf a -> HList PredsOf a
-
-instance Union Empty where
-  unionps _ _ = X
-
-instance Union t => Union (Cons h t) where
-  unionps (hl :& tl) (hr :& tr) = unionPred hl hr :& unionps tl tr
-
-class Satisfies a where
-  sat :: HList ValOf a -> HList PredsOf a -> Bool
-
-instance Satisfies Empty where
-  sat _ _ = False
-
-instance Satisfies t => Satisfies (Cons h t) where
-   sat (hl :& tl) (hr :& tr) = satSet hl hr || sat tl tr
-
-
-sats _       (_ :? Any)      = True
-sats (Val p) (_ :? (Neq q))  = p /= q
-sats (Val p) (_ :? (Leq q))  = p <= q
-sats _       (_ :? DontCare) = False
-
-satSet v (PredsOf s) = any (sats v) (elems s)
-
-
-
-
-
-instance HasDefault PredsOf where
-  def = PredsOf empty
-
-padd :: PredOf n -> PredsOf n -> PredsOf n
-padd a (PredsOf b) = PredsOf $ insert a b
-
-data React e a 
+data React v p a 
   = Done a
-  | Await (HList PredsOf e) (HList ValOf e -> React e a)
+  | Await p (v -> React v p a)
 
 
-instance Monad (React e) where
+instance Monad (React v p) where
   return              = Done
   (Await e c)  >>= f  = Await e ((>>= f) . c)
   (Done v)     >>= f  = f v
 
 
 first
-  :: (Union e, Satisfies e) =>
-     React e t -> React e t1 -> React e (React e t, React e t1)
+  :: (Satisfies v p, PredList p) =>
+     React v p a -> React v p b -> React v p (React v p a, React v p b)
 first l r = case (l,r) of
   (Await el _, Await er _) -> 
-      let  e    = el `unionps` er
+      let  e    = el `hunion` er
            c b  = first (update l b) (update r b)
       in Await e c
   _ -> Done (l,r)
 
-update :: Satisfies a => React a t -> HList ValOf a -> React a t
-update (Await e c) b  | sat b e = trace "upNow" $update (c b) b
-update r           _  = trace "Updone" r
+update :: Satisfies v p => React v p a -> v -> React v p a
+update (Await e c) b  | satisfies b e = c b
+update r           _  = r
 
-exper'
-  :: (HasDefaults ns, Has n ns) =>
-     PredOf n -> React ns (ValOf n)
-exper' (n :? p) = Await (modify (padd (n :? p)) defs) (\s -> Done (lookup n s))
+exper
+  :: (Has n a v, HasPred n a p, PredList p) =>
+     n -> Predicate a -> React v p a
+exper n p = Await ps (\s -> Done (hlookup n s))
+  where ps = addPred n p noPreds
 
-exper p = exper'  p >>= return . dropVal
-dropVal (Val v) = v
 
 interpret :: Monad m =>
-     (HList PredsOf ns -> m (HList ValOf ns)) -> 
-     React ns a -> m a
+     (p -> m v) -> 
+     React v p a -> m a
 interpret p (Done a)     = return a
 interpret p (Await e c)  = p e >>= interpret p . c
 
 -- | A signal computation is a reactive computation of an initialized signal
-newtype  Sig      e a b     =  Sig (React e (ISig e a b)) 
+newtype  Sig     p v a b     =  Sig (React p v (ISig p v a b)) 
 -- | An initialized signal 
-data     ISig     e a b     =  a :| (Sig e a b) 
-                            |  End b
+data     ISig    p v a b     =  a :| (Sig p v a b) 
+                             |  End b
 
 interpretSig
   :: Monad m =>
-     (HList PredsOf ns -> m (HList ValOf ns))
-     -> (t -> m a) -> Sig ns t b -> m b
+     (p -> m v)
+     -> (e -> m ()) -> Sig v p e r -> m r
 interpretSig p d (Sig s) = 
   do  l <- interpret p s
       case l of
         h :| t  ->  d h >> interpretSig p d t
         End a   -> return a
 
-instance Monad (Sig e a) where
+instance Monad (Sig p v a) where
   return a = emitAll (End a)
   (Sig l) >>= f = Sig (l >>= ib)
    where  ib (h :| t)  = return (h :| (t >>= f))
           ib (End a)   = let Sig x = f a in x
 
-instance Monad (ISig e a) where
+instance Monad (ISig p v a) where
   return = End
   (End a)   >>= f = f a
   (h :| t)  >>= f = h :| (t >>= emitAll . f)
@@ -181,9 +101,9 @@ ibreak f (h :| t)  | f h        = return (h :| t)
 ibreak f (End a)                = return (End a)
 
 -- | |foldl| on signal computations behaves the same as waiting for the signal computation to end and then applying the 'fold' on the list of emitted values.
-foldl :: (a -> b -> a) -> a -> Sig e b r -> React e a
+foldl :: (a -> b -> a) -> a -> Sig v p b r -> React v p a
 foldl   f i (Sig l)   = l >>= ifoldl f i
-ifoldl :: (a -> b -> a) -> a -> ISig e b r -> React e a
+ifoldl :: (a -> b -> a) -> a -> ISig v p b r -> React v p a
 ifoldl  f i (h :| t)  = foldl f (f i h) t
 ifoldl  f i (End a)   = return i
 
@@ -221,8 +141,7 @@ pairs (hl :| Sig tl) (hr :| Sig tr)  = (hl,hr) :| tail
          lup _ (Done l)  = l; lup h t = h :| Sig t
 
 -- | Sample the former signal computation each time the later emits a value.
-indexBy ::  (Satisfies e, Union e) => Sig e a l -> Sig e b r 
-            -> Sig e a ()
+
 l `indexBy` (Sig r) = 
  do  (Sig l,r) <- waitFor (res (l `until` r))
      case (l,r) of
@@ -249,17 +168,17 @@ waitFor a  = Sig (fmap End a)
 -- | The reactive computation that never completes.
 hold       = waitFor never 
 
-never = Await defs undefined
+never = Await noPreds undefined
 
 -- | Convert the result of a signal computation to a reactive computation.
 res (Sig l)    = l >>= ires 
 -- | Convert the result of an initialized signal a reactive computation.
 ires (_ :| t)  = res t; ires (End a)   = Done a
 
-instance Functor (React e) where
+instance Functor (React p v) where
   fmap f a = a >>= return . f
 -- | Return the result of a reactive computation if it is done
-done (Done a)              = trace "Done!" $ Just a  ; done _  = trace "not done" Nothing
+done (Done a)              =  Just a  ; done _  = Nothing
 -- | Give the current value of a signal computation, if any.
 cur (Sig (Done (h :| _)))  = Just h  ; cur _   = Nothing
 
@@ -274,8 +193,7 @@ done' = fromJust . done
 -- * Dynamic lists
 
 -- | Cons the values from the first signal computation to the values form the latter signal computation over time.
-cons :: (Satisfies e, Union e) =>  ISig e a l -> ISig e [a] r 
-                  -> ISig e [a] ()
+
 cons h t = do  (h,t) <- imap (uncurry (:)) (pairs h t)
                imap (: []) h
                t
@@ -283,7 +201,7 @@ cons h t = do  (h,t) <- imap (uncurry (:)) (pairs h t)
 -- | Run the initialized signals from the given signal computation in parallel, and emit the lists of the current form of all alive initialized signals.
 parList x = emitAll (iparList x)
 
-iparList :: (HasDefaults e, Satisfies e, Union e) => Sig e (ISig e a l) r -> ISig e [a] ()
+
 
 iparList l = rl ([] :| hold) l >> return () where
   rl t (Sig es) = do  (t,es) <- t `iuntil` es
@@ -292,93 +210,11 @@ iparList l = rl ([] :| hold) l >> return () where
                         _               -> t 
                         
 
+all n = waitFor (exper n Any) >>= change
+   where change v = emit v >> waitFor (exper n (Neq v)) >>= change
+          
 
-type RState ns e = (React ns e, HList ValOf ns)
-
-newtype RStateM ns i m a = RStateM (RState ns i -> m (Either i (RState ns i, a)))
-
-instance (Satisfies ns, Monad m) => Monad (RStateM ns i m) where
-  return a = RStateM (\x -> return (Right (x,a)))
-  (RStateM f) >>= g = RStateM cont where
-     cont x = do  res <- f x
-                  case res of
-                    Left i -> return (Left i)
-                    Right ((r,v),a) ->
-                     let r' = update r v
-                         RStateM gi = g a 
-                     in case done r' of
-                        Just a -> return (Left a)
-                        Nothing -> gi (r',v)
-
-instance MonadTrans (RStateM ns i)  where
-  lift a = RStateM (\x -> a >>= return . Right . (x,))
-
-
-getr :: Monad m => RStateM ns i m (HList ValOf ns)
-getr = RStateM (\(r,vs) -> return (Right ((r,vs),vs)))
-
-getPredsr = RStateM (\(r,vs) -> return (Right ((r,vs),preds r)))
-  where preds (Await x _) = x
-
-
-giver n = getr >>= (return . lookup n)
-
-
-putr :: Monad m => HList ValOf ns -> RStateM ns i m ()
-putr a = RStateM (\(r,_) -> return (Right ((r,a),())))
-
-runStateM s r (RStateM f) = f (r,s)
-
-type SState m ns e r = (e -> m (), Sig ns e r, HList ValOf ns)
-
-newtype SStateM ns e r m a = SStateM (SState m ns e r -> m (Either r (SState m ns e r, a)))
-
-instance (Satisfies ns, Monad m) => Monad (SStateM ns p i m) where
-  return a = SStateM (\x -> return (Right (x,a)))
-  (SStateM f) >>= g = SStateM cont where
-     cont x = do  res <- f x
-                  case res of
-                    Left a -> return (Left a)
-                    Right ((f,Sig r,v),a) ->
-                     let r' = update r v
-                         SStateM gi = g a 
-                     in case done r' of
-                        Just (End a)-> return (Left a)
-                        _ -> do r'' <- maybeProc f (Sig r')
-                                gi (f,r'',v)
-     maybeProc f (Sig (done -> Just (h :| t))) = trace "maybe not done" $ f h >> maybeProc f t
-     maybeProc f r = return r
-
-instance MonadTrans (SStateM ns e r)  where
-  lift a = SStateM (\x -> a >>= (trace "lifted" $ return . Right . (x,)))
-
-sget :: Monad m => SStateM ns e r m (HList ValOf ns)
-sget = SStateM (\(f,r,vs) -> return (Right ((f,r,vs),vs)))
-
-
-getPreds = SStateM (\(f,r,vs) -> return (Right ((f,r,vs),preds r)))
-  where preds (Sig (Await x _)) = x
-
-getPred n = getPreds >>= return . lookup n
-
-give n = sget >>= (return . lookup n)
-
-
-sput :: Monad m => HList ValOf ns -> SStateM ns e r m ()
-sput a = SStateM (\(f,r,_) -> return (Right ((f,r,a),())))
-
-runStateS
-  :: (e -> m ())
-     -> HList ValOf ns
-     -> Sig ns e r
-     -> SStateM ns e r m p
-     -> m (Either r (SState m ns e r, p))
-runStateS p s r (SStateM f) = f (p,r,s)
-
-
-all n = waitFor (exper (n :? Any)) >>= neq
-  where neq v = emit v >> waitFor (exper (n :? Neq v)) >>= neq
-
-change n f = do v1 <- exper (n :? Any)
-                v2 <- exper (n :? Neq v1)     
+change n f = do v1 <- exper n Any
+                v2 <- exper n (Neq v1)
                 return (f v1 v2)
+

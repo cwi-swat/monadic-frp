@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TupleSections, ViewPatterns #-}
+{-# LANGUAGE FlexibleInstances,MultiParamTypeClasses, TypeSynonymInstances, TypeOperators,FlexibleContexts, TypeFamilies, TupleSections, ViewPatterns #-}
 -- | SDL boxes interpreter for Symmetric FRP
 module SDLSFRP where
 
@@ -7,11 +7,14 @@ import Graphics.UI.SDL hiding (update,Rect,Color,Event)
 import Reactive hiding (foldl,map)
 import HMap 
 import Data.Set hiding (foldl, map, null)
+import qualified Data.Set as Set
 import qualified Graphics.UI.SDL as SDL
 import Data.Maybe
 import Control.Monad.State.Lazy
 import Control.Monad.Trans
 import Boxes
+
+
 
 
 data MouseBtn  = MLeft | MMiddle | MRight deriving (Ord,Eq,Show)
@@ -20,59 +23,57 @@ type Time = Double
 data MouseBtns  = MouseBtns
 data MousePos   = MousePos
 data Dt         = Dt
-type instance TypeOf MouseBtns  = Set MouseBtn
-type instance TypeOf MousePos   = Point
-type instance TypeOf Dt         = Time
-
-type SDLVars = Cons Dt (Cons MousePos (Cons MouseBtns Empty))
+instance Var MouseBtns (Set MouseBtn)
+instance Var MousePos Point
+instance Var Dt Time
 
 
+type SDLVals = MouseBtns := Set MouseBtn :&  MousePos := Point :& Dt := Time :& X
+type SDLPreds = MouseBtns := PredSet (Set MouseBtn) :&  MousePos := PredSet Point :& Dt := PredSet Time :& X
 
-interpretBoxes :: (Double,Double) -> Sig SDLVars [Box] () -> IO ()
+initS :: SDLVals
+initS = V empty :& V (0,0) :& V 0 :& X 
+
+
+
+interpretBoxes :: (Double,Double) -> Sig SDLVals SDLPreds [Box] a -> IO a
 interpretBoxes (x,y) r = 
   do SDL.init [InitEverything]
      setVideoMode (floor x) (floor y) 32 [DoubleBuf]
      screen <- getVideoSurface
      t <- curTime
-     let drawBoxes' r = lift (drawBoxes screen r)
-     let init = ((Val 0) :& (Val (0,0) :& (Val empty :& X))) :: HList ValOf SDLVars
-     let state = runStateS drawBoxes' init r upStates
-     let run = evalStateT state t 
-     run
-     return ()
-     
+     evalStateT (loop screen r) (t,initS) 
 
-upStates = forever upState
 
-upState :: SStateM SDLVars a r (StateT Time IO) ()
-upState = do 
-             prevt <- lift get
-             l2 $ print (show prevt)
-             t <- l2 curTime
-             l2 $ print "Jalllooo"
-             let dt = prevt - t
-             
-             ps <- getPred Dt
-             let mdt = maxTime ps
-             l2 $ print (show mdt)
+loop s (Sig (done -> Just (h :| t)))  = lift (drawBoxes s h) >> loop s t
+loop s (Sig (done -> Just (End a)))  = return a
+loop s (Sig r@(Await p c)) = upState p >>= loop s . Sig . update r
+
+upState :: SDLPreds -> StateT (Time,SDLVals) IO SDLVals
+upState p = do 
+             (prevt,s) <- get
+             t <- lift curTime
+             let dt = t - prevt
+             let ps = getPred Dt p :: PredSet Double
+             let mdt = maxTime ps :: Double
              if mdt < dt 
              then
-              do s <- sget
-                 sput (modv Dt (const mdt) s)
-                 lift (put (prevt + mdt))
+              do let s' = hmod Dt (const mdt :: Double -> Double) s
+                 put (prevt + mdt, s')
+                 return s'
              else 
-              do evs <- l2 getSDLEvs
-                 s <- sget
+              do evs <- lift getSDLEvs
                  let s'  = foldl handleEv s evs
-                 let s'' = modv Dt (const dt) s'
-                 sput s''
-                 lift (put t)
-  where l2 = lift . lift
+                 let s'' = hmod Dt (const dt) s'
+                 put (t,s'')
+                 return s''
              
 
-maxTime (PredsOf ts) = maximum $ mapFilter fromEq (elems ts)
-  where fromEq (_ :? Leq n) = Just n
-        fromEq _      = Nothing
+maxTime ts | null ms = 1.0 / 0
+           | otherwise =  maximum ms
+  where ms = mapFilter fromEq (elems ts)
+        fromEq (Leq n) = Just n
+        fromEq _       = Nothing
 
 mapFilter :: (a -> Maybe b) -> [a] -> [b]
 mapFilter f = catMaybes . map f
@@ -84,9 +85,10 @@ getSDLEvs = pollEvent >>=
               _ -> do  t <- getSDLEvs
                        return (h:t)
 
-handleEv l (MouseMotion x y _ _)    = modv MousePos (const (fromIntegral x,fromIntegral y)) l
-handleEv l (MouseButtonDown _ _ x)  = modv MouseBtns (insert (toM x)) l
-handleEv l (MouseButtonUp  _ _ x)   = modv MouseBtns (delete (toM x)) l
+handleEv :: SDLVals -> SDL.Event -> SDLVals
+handleEv l (MouseMotion x y _ _)    = hmod MousePos (const (fromIntegral x :: Double,fromIntegral y :: Double)) l
+handleEv l (MouseButtonDown _ _ x)  = hmod MouseBtns (insert (toM x)) l
+handleEv l (MouseButtonUp  _ _ x)   = hmod MouseBtns (delete (toM x)) l
 handleEv l _                        = l
 
 curTime = do t <-  getTicks
@@ -96,4 +98,6 @@ toM ButtonLeft    = MLeft
 toM ButtonMiddle  = MMiddle
 toM ButtonRight   = MRight
 toM _             = MMiddle
+
+
 

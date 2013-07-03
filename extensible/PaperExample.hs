@@ -7,18 +7,21 @@ import Data.Set hiding (map,filter)
 import Prelude hiding (lookup,null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl,mod,all)
 import qualified Prelude as P
 import Data.Maybe
+import HMap
 import Boxes
 import SDLSFRP
 import qualified Data.Set as Set
+import Debug.Trace
+
 
 mouseBtns = all MouseBtns
 mousePos = all MousePos
-deltaTime  = exper (Dt :? Any) 
+deltaTime  = exper Dt  Any
 
 
-type Reactg = React SDLVars
-type Sigg     = Sig    SDLVars
-type ISigg    = ISig  SDLVars
+type Reactg = React SDLVals SDLPreds
+type Sigg     = Sig    SDLVals SDLPreds
+type ISigg    = ISig  SDLVals SDLPreds
 
 mouseDown :: Reactg (Set MouseBtn)
 mouseDown = change MouseBtns (flip difference)
@@ -26,7 +29,7 @@ mouseDown = change MouseBtns (flip difference)
 mouseUp :: Reactg (Set MouseBtn)
 mouseUp = change MouseBtns difference
 
-tryWait t = exper (Dt :? Leq t) 
+tryWait t = exper Dt (Leq t) 
 
 
 sameClick :: Reactg Bool
@@ -64,7 +67,7 @@ before a b = do  (a',b') <- first a b
 doubler :: Reactg ()
 doubler = do  rightClick
               r <- rightClick `before` sleep 0.2
-              if r then return () else doubler
+              if r then trace "Doubler" $ return () else trace "no double" doubler
 
 
 
@@ -142,7 +145,8 @@ boxes =  parList (spawn box)
 
 sleep :: Time -> Reactg ()
 sleep t = do  t' <- tryWait t
-              if t' == t then return () else sleep (t - t')
+              
+              if trace (show t') (t' == t) then return () else sleep (t - t')
 
 
 
