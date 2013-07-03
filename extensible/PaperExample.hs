@@ -67,7 +67,7 @@ before a b = do  (a',b') <- first a b
 doubler :: Reactg ()
 doubler = do  rightClick
               r <- rightClick `before` sleep 0.2
-              if r then trace "Doubler" $ return () else trace "no double" doubler
+              if r then return () else doubler
 
 
 
@@ -145,7 +145,6 @@ boxes =  parList (spawn box)
 
 sleep :: Time -> Reactg ()
 sleep t = do  t' <- tryWait t
-              
               if trace (show t') (t' == t) then return () else sleep (t - t')
 
 
