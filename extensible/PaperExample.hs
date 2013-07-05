@@ -1,5 +1,5 @@
 -- | The example from the paper
-{-# LANGUAGE TupleSections, ViewPatterns, NoMonomorphismRestriction #-}
+{-# LANGUAGE MultiParamTypeClasses,TupleSections, ViewPatterns, NoMonomorphismRestriction #-}
 module PaperExample where
 
 import Reactive
@@ -7,21 +7,33 @@ import Data.Set hiding (map,filter)
 import Prelude hiding (lookup,null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl,mod,all)
 import qualified Prelude as P
 import Data.Maybe
-import HMap
+import HEnv
 import Boxes
 import SDLSFRP
 import qualified Data.Set as Set
-import Debug.Trace
 
+data MouseOver  = MouseOver
+instance Var MouseOver Bool
 
 mouseBtns = all MouseBtns
 mousePos = all MousePos
-deltaTime  = exper Dt  Any
+times = all Time
+
+elapsed :: Sigg Seconds ()
+elapsed  = do tbase <- waitFor (exper Time (Any :: Predicate Seconds))
+              t2 <- waitFor (exper Time (Neq tbase))
+              rest tbase t2
+  where rest tbase tprev =
+          do emit (tprev - tbase)
+             t' <- waitFor (exper Time (Neq tprev))
+             rest tbase t'
+          
+               
 
 
-type Reactg = React SDLVals SDLPreds
-type Sigg     = Sig    SDLVals SDLPreds
-type ISigg    = ISig  SDLVals SDLPreds
+type Reactg = React SDLVars
+type Sigg     = Sig    SDLVars 
+type ISigg    = ISig  SDLVars
 
 mouseDown :: Reactg (Set MouseBtn)
 mouseDown = change MouseBtns (flip difference)
@@ -29,7 +41,6 @@ mouseDown = change MouseBtns (flip difference)
 mouseUp :: Reactg (Set MouseBtn)
 mouseUp = change MouseBtns difference
 
-tryWait t = exper Dt (Leq t) 
 
 
 sameClick :: Reactg Bool
@@ -83,11 +94,8 @@ cycleColor = cc colors 0 where
 curRect :: Point -> Sigg Rect ()
 curRect p1 = map (Rect p1) mousePos
 
--- data Rect    = Rect {leftup :: Point, rightdown :: Point}
 
 
-elapsed :: Sigg Time ()
-elapsed = scanl (+) 0 (repeat deltaTime)
 
 wiggleRect :: Rect -> Sigg Rect ()
 wiggleRect (Rect lu rd) = map rectAtTime elapsed
@@ -129,7 +137,6 @@ drClickOn :: Rect -> Reactg (Maybe Point)
 drClickOn r = 
   posInside r (mousePos `indexBy` repeat doubler)
 
-
 box :: Sigg Box ()
 box = do  r <- map setColor defineRect
           chooseBoxColor r
@@ -137,15 +144,25 @@ box = do  r <- map setColor defineRect
           return ()
   where setColor r = Box r (head colors)
 
-
+{--
+box2 :: Sigg Box ()
+box2 = do r <- map setColor defineRect
+          dynlet (
+            MouseOver :== (False :| (map (`inside` r) mousePos ))
+            :& X ) $ 
+            do map (\x -> Box r x) $ map (\x -> if x then Color 1 0 0 else Color 1 1 1) $ all MouseOver
+               
+  where setColor r = Box r (head colors)
+--}
 boxes :: Sigg [Box] ()
 boxes =  parList (spawn box)
 
 
 
-sleep :: Time -> Reactg ()
-sleep t = do  t' <- tryWait t
-              if trace (show t') (t' == t) then return () else sleep (t - t')
+sleep :: Seconds -> Reactg ()
+sleep t = do  t1 <- exper Time Any
+              exper Time (Eq (t1 + t))
+              return ()
 
 
 

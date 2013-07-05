@@ -11,17 +11,16 @@ infixr 5 :&
 infixr 6 :=
 data X = X
 data h :& t = h :& t
-data n := v = V v
 
-data Predicate a = Any | Neq a | Leq a | DontCare deriving (Ord,Show,Eq)
+data V p n v = n :-> p v
 
-sat v Any = True
-sat v (Neq q) = v /= q
-sat v (Leq a) = v <= a
-sat v DontCare  = False
+instance Ord v => Ord (n := v) where
+  (V a) `compare` (V b) = a `compare` b
+
+instance Ord v => Eq (n := v) where
+  a == b = compare a b == EQ
 
 
-satSet v s = fold (||) False (map (sat v) s)
 
 class Ord v => Var n v | n -> v
 
@@ -53,6 +52,7 @@ instance HasPred n v t => HasPred n v (x :& t) where
 
 class PredList x where
   noPreds :: x
+  
   hunion :: x -> x -> x
 
 instance PredList X where
@@ -71,6 +71,16 @@ instance Satisfies X X where
 
 instance (Var n v, Satisfies l r) => Satisfies ((n := v) :& l) ((n := PredSet v) :& r) where
    satisfies (V v :& l) (V p :& r) = satSet v p || satisfies l r
+
+class HEq a where
+  heq :: a -> a -> Bool
+
+instance HEq X where
+  heq _ _  = True
+
+instance (HEq t, Eq h) => HEq (h :& t) where
+  heq (a :& tl) (b :& tr) = a == b && heq tl tr
+   
 
 
 
