@@ -69,9 +69,13 @@ data RRect = RRect Point Point deriving Show
 data CColor = CColor { r :: Double, g :: Double, b :: Double } deriving Show
 data Box = Box RRect CColor deriving Show
 
-cycleColorNoEnd :: SF (Yampa.Event ()) CColor
-cycleColorNoEnd = cc colors where
-  cc (h : t) = dSwitch (proc c -> do x <- notYet -< c; returnA -< (h,x) ) (\x -> trace "next color" $ cc t)
+cycleColor :: SF SDLIn (CColor, Yampa.Event Int)
+cycleColor = cc colors 0 where
+  cc (h : t) i = dSwitch (proc (md,mu,mp) -> do
+                mc <- middleClick -< md
+                rc <- rightClick -< md
+                returnA -< ((h,fmap (const i) rc),fmap (const i) mc) ) 
+                (\i -> cc t (i+1))
            
 wiggleRect :: RRect -> SF a RRect
 wiggleRect (RRect lu rd) = localTime >>> arr rectAtTime
@@ -88,61 +92,53 @@ inside :: Point -> RRect -> Bool
 
 colors = cycle [CColor 1 0 0 , CColor 0 1 0 , CColor 0 0 1 , CColor 1 1 0, CColor 0 1 1 , CColor 1 0 1, CColor 0 1 1]
 
-chooseBoxColor :: RRect -> SF (MouseDown, MouseUp, MousePos) Box
+chooseBoxColor :: RRect -> SF SDLIn (Box, Yampa.Event ())
 chooseBoxColor rect =
-  proc (md,mu,mp) -> do
+  proc s -> do
     r' <- wiggleRect rect -< ()
-    mm <- middleClick -< md
-    c  <- cycleColorNoEnd -< mm
+    (c,e)  <- cycleColor -< s 
     rect <- arr (uncurry Box) -< (r',c) 
-    returnA -< rect   
+    returnA -< (rect,fmap (const ()) e)   
 
-box :: Point -> SF (MouseDown,MouseUp,MousePos) Box
-box p1 =         
-            dSwitch (proc (md,mu,mp) -> do
-                  r <- curRect p1 -< mp
-                  dr <- leftUp -< mu
-                  b <- arr setColor -< r
-                  returnA  -< (b, fmap (const r) dr)
-             )$ (\r -> dSwitch ( proc (md,mu,mp) -> do
-                       b <- chooseBoxColor r -< (md,mu,mp)
-                       cr <- rightClick -< md
-                       returnA -< (b,fmap (const b) cr)
-               ) constant)
+box :: Point -> SF SDLIn Box
+box p1 =     dSwitch (curRect p1 >>> first (arr (setColor)))
+             (\r -> dSwitch (chooseBoxColor r)
+             constant)
   where setColor r = Box r (head colors)
-            
+        
 
-curRect :: Point -> SF MousePos RRect
-curRect p1 = arr (\p2 -> RRect p1 p2)
 
-boxes :: [SF (MouseDown,MouseUp, MousePos) Box] -> SF (MouseDown, MouseUp,MousePos) [Box]
-boxes i = dpSwitch (\i l -> map (i,) l)
-                 i
+
+curRect :: Point -> SF SDLIn (RRect, Yampa.Event RRect)
+curRect p1 = proc (md,mu,mp) -> do  
+               r <- arr (RRect p1) -< mp
+               end <- leftUp -< mu
+               returnA -< (r,fmap (const r) end)
+
+boxes :: SF (MouseDown, MouseUp,MousePos) [Box]
+boxes = boxes' [] where
+  boxes' i = dpSwitch (\i l -> map (i,) l) i
                  (proc ((md,mu,mp),l) -> do
                     lc <- leftClick -< md
                     rc <- rightClick  -< md
                     dels <- arr findDels -< (rc,mp,l)
-                    a <- arr ans -< (dels,lc,mp)
-                    notYet -< a)
+                    arr ans -< (dels,lc,mp))
                  mutateList 
+  ans ([],Yampa.NoEvent,_) = Yampa.NoEvent
+  ans (l, Yampa.Event _ , p) = Yampa.Event (l, Just p)
+  ans (l, Yampa.NoEvent, _) = Yampa.Event (l,Nothing)
+  mutateList l (lmin,d) =  newHead d ++ dels l lmin
 
 
-boxes' :: SF (MouseDown, MouseUp, MousePos) [Box]
-boxes' = boxes []
-ans ([],Yampa.NoEvent,_) = Yampa.NoEvent
-ans (l, Yampa.Event _ , p) = Yampa.Event (l, Just p)
-ans (l, Yampa.NoEvent, _) = Yampa.Event (l,Nothing)
+newHead (Just p) = [box p]
+newHead Nothing = []
+  
 
-mutateList l (lmin,d) =  boxes nl
-  where nl = newHead d ++ l'
-        l' = map fst $ filter (not . snd) $ zip l lmin
-        newHead (Just p) = [box p]
-        newHead Nothing = []
-
+dels l lmin=  map fst $ filter (not . snd) $ zip l lmin
 findDels (Yampa.NoEvent,_,l) =  map (\b -> False) l
 findDels (_, p, l) =  map (\(Box r c) -> ( p `inside` r)) l
 
-main = interpretBoxes (800,600) boxes'
+main = interpretBoxes (800,600) boxes
 
 ----- interface SDL
 
