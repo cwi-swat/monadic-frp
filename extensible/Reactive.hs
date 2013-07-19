@@ -1,76 +1,110 @@
-{-# LANGUAGE UndecidableInstances,TupleSections, ViewPatterns, TypeFamilies,NoMonomorphismRestriction,OverlappingInstances,FlexibleInstances,FunctionalDependencies,MultiParamTypeClasses,GADTs, TypeOperators,FlexibleContexts  #-}
+{-# LANGUAGE RankNTypes,UndecidableInstances,TupleSections, ViewPatterns, TypeFamilies,NoMonomorphismRestriction,OverlappingInstances,FlexibleInstances,FunctionalDependencies,MultiParamTypeClasses,GADTs, TypeOperators,FlexibleContexts  #-}
 
 module Reactive where
 
-import HMap
+import HEnv
 import Data.Maybe
 import Data.Set hiding (map,filter,foldl)
 import qualified Data.Set as Set
 import Prelude hiding (lookup,null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl,mod,all)
 import Control.Monad.Trans
 
+data Predicate a = Any | Neq a | Eq a | DontCare deriving (Ord,Show,Eq)
 
-data React v p a 
+data V x = V x
+onV f (V x) = V (f x)
+
+data PredSet a = PredSet (Set (Predicate a))
+
+sat v Any = True
+sat v (Neq q) = v /= q
+sat v (Eq a) = v == a
+sat v DontCare  = False
+
+
+satSet ::  Ord v =>  V v -> PredSet v -> Bool -> Bool
+satSet (V v) (PredSet s) b = Set.fold (||) False (Set.map (sat v) s) || b
+
+satisfies :: MMapOps l => l V -> l PredSet -> Bool
+satisfies l r =  hfoldzip satSet False l r
+
+zipPreds :: MMapOps l => l PredSet -> l PredSet -> l PredSet
+zipPreds l r = hzip punion l r
+  where punion (PredSet a) (PredSet b) = PredSet (a `union` b)
+
+
+data React l a 
   = Done a
-  | Await p (v -> React v p a)
+  | Await (l PredSet) (l V -> React l a)
 
 
-instance Monad (React v p) where
+instance Monad (React l) where
   return              = Done
   (Await e c)  >>= f  = Await e ((>>= f) . c)
   (Done v)     >>= f  = f v
 
 
 first
-  :: (Satisfies v p, PredList p) =>
-     React v p a -> React v p b -> React v p (React v p a, React v p b)
+  :: MMapOps l =>
+     React l a -> React l b -> React l (React l a, React l b)
 first l r = case (l,r) of
   (Await el _, Await er _) -> 
-      let  e    = el `hunion` er
+      let  e    = el `zipPreds` er
            c b  = first (update l b) (update r b)
       in Await e c
   _ -> Done (l,r)
 
-update :: Satisfies v p => React v p a -> v -> React v p a
-update (Await e c) b  | satisfies b e = c b
-update r           _  = r
+
+
+
+update (Await e c) b | satisfies b e = update (c b) b
+update r          _ = r
+
+updateOnce (Await e c) b  | satisfies b e = c b
+updateOnce r           _  = r
 
 exper
-  :: (Has n a v, HasPred n a p, PredList p) =>
-     n -> Predicate a -> React v p a
-exper n p = Await ps (\s -> Done (hlookup n s))
-  where ps = addPred n p noPreds
+  :: (Var n v, Has n v l, Build l) =>
+     n -> Predicate v -> React l v
+exper n p = Await ps (\s -> Done $ let V v = hlookup n s in v)
+  where ps = hmod n addPred emptyPreds
+        addPred  (PredSet ps)= PredSet (p `insert` ps) 
 
+
+emptyPreds :: Build l => l PredSet
+emptyPreds = build init
+  where init :: forall v. PredSet v
+        init = PredSet empty
 
 interpret :: Monad m =>
-     (p -> m v) -> 
-     React v p a -> m a
+     (l PredSet -> m (l V)) -> 
+     React l a -> m a
 interpret p (Done a)     = return a
 interpret p (Await e c)  = p e >>= interpret p . c
 
 -- | A signal computation is a reactive computation of an initialized signal
-newtype  Sig     p v a b     =  Sig (React p v (ISig p v a b)) 
+newtype  Sig     l a b     =  Sig (React l (ISig l a b)) 
 -- | An initialized signal 
-data     ISig    p v a b     =  a :| (Sig p v a b) 
+data     ISig    l a b     =  a :| (Sig l a b) 
                              |  End b
 
 interpretSig
   :: Monad m =>
-     (p -> m v)
-     -> (e -> m ()) -> Sig v p e r -> m r
+     (l PredSet -> m (l V))
+     -> (e -> m ()) -> Sig l e r -> m r
 interpretSig p d (Sig s) = 
   do  l <- interpret p s
       case l of
         h :| t  ->  d h >> interpretSig p d t
         End a   -> return a
 
-instance Monad (Sig p v a) where
+instance Monad (Sig l a) where
   return a = emitAll (End a)
   (Sig l) >>= f = Sig (l >>= ib)
    where  ib (h :| t)  = return (h :| (t >>= f))
           ib (End a)   = let Sig x = f a in x
 
-instance Monad (ISig p v a) where
+instance Monad (ISig l a) where
   return = End
   (End a)   >>= f = f a
   (h :| t)  >>= f = h :| (t >>= emitAll . f)
@@ -101,9 +135,9 @@ ibreak f (h :| t)  | f h        = return (h :| t)
 ibreak f (End a)                = return (End a)
 
 -- | |foldl| on signal computations behaves the same as waiting for the signal computation to end and then applying the 'fold' on the list of emitted values.
-foldl :: (a -> b -> a) -> a -> Sig v p b r -> React v p a
+foldl :: (a -> b -> a) -> a -> Sig l b r -> React l a
 foldl   f i (Sig l)   = l >>= ifoldl f i
-ifoldl :: (a -> b -> a) -> a -> ISig v p b r -> React v p a
+ifoldl :: (a -> b -> a) -> a -> ISig l b r -> React l a
 ifoldl  f i (h :| t)  = foldl f (f i h) t
 ifoldl  f i (End a)   = return i
 
@@ -168,14 +202,14 @@ waitFor a  = Sig (fmap End a)
 -- | The reactive computation that never completes.
 hold       = waitFor never 
 
-never = Await noPreds undefined
+never = Await emptyPreds undefined
 
 -- | Convert the result of a signal computation to a reactive computation.
 res (Sig l)    = l >>= ires 
 -- | Convert the result of an initialized signal a reactive computation.
 ires (_ :| t)  = res t; ires (End a)   = Done a
 
-instance Functor (React p v) where
+instance Functor (React l) where
   fmap f a = a >>= return . f
 -- | Return the result of a reactive computation if it is done
 done (Done a)              =  Just a  ; done _  = Nothing
@@ -217,4 +251,5 @@ all n = waitFor (exper n Any) >>= change
 change n f = do v1 <- exper n Any
                 v2 <- exper n (Neq v1)
                 return (f v1 v2)
+
 

@@ -5,7 +5,7 @@ module SDLSFRP where
 import Prelude
 import Graphics.UI.SDL hiding (update,Rect,Color,Event)
 import Reactive hiding (foldl,map)
-import HMap 
+import HEnv 
 import Data.Set hiding (foldl, map, null)
 import qualified Data.Set as Set
 import qualified Graphics.UI.SDL as SDL
@@ -18,61 +18,62 @@ import Boxes
 
 
 data MouseBtn  = MLeft | MMiddle | MRight deriving (Ord,Eq,Show)
-type Time = Double
+type Seconds = Double
 
 data MouseBtns  = MouseBtns
 data MousePos   = MousePos
-data Dt         = Dt
-instance Var MouseBtns (Set MouseBtn)
-instance Var MousePos Point
-instance Var Dt Time
+data Time       = Time
+instance Var MouseBtns (Set MouseBtn) where getVar = MouseBtns
+instance Var MousePos Point  where getVar = MousePos
+instance Var Time Seconds where getVar = Time
 
 
-type SDLVals = MouseBtns := Set MouseBtn :&  MousePos := Point :& Dt := Time :& X
-type SDLPreds = MouseBtns := PredSet (Set MouseBtn) :&  MousePos := PredSet Point :& Dt := PredSet Time :& X
+type SDLVars = (MouseBtns :-> Set MouseBtn :& MousePos :-> Point :& Time :-> Seconds :& X)
 
-initS :: SDLVals
-initS = V empty :& V (0,0) :& V 0 :& X 
+type SDLVals = SDLVars V
+type SDLPreds = SDLVars PredSet
+
+initS :: Seconds -> SDLVars V
+initS s = MouseBtns :-> V empty :& MousePos :-> V (0,0) :& Time :-> V s :& X 
 
 
 
-interpretBoxes :: (Double,Double) -> Sig SDLVals SDLPreds [Box] a -> IO a
+interpretBoxes :: (Double,Double) -> Sig SDLVars [Box] a -> IO a
 interpretBoxes (x,y) r = 
   do SDL.init [InitEverything]
      setVideoMode (floor x) (floor y) 32 [DoubleBuf]
      screen <- getVideoSurface
      t <- curTime
-     evalStateT (loop screen r) (t,initS) 
+     evalStateT (loop screen r) (initS t)
 
 
 loop s (Sig (done -> Just (h :| t)))  = lift (drawBoxes s h) >> loop s t
 loop s (Sig (done -> Just (End a)))  = return a
 loop s (Sig r@(Await p c)) = upState p >>= loop s . Sig . update r
 
-upState :: SDLPreds -> StateT (Time,SDLVals) IO SDLVals
+upState :: SDLPreds -> StateT SDLVals IO SDLVals
 upState p = do 
-             (prevt,s) <- get
+             s <- get 
              t <- lift curTime
-             let dt = t - prevt
-             let ps = getPred Dt p :: PredSet Double
-             let mdt = maxTime ps :: Double
-             if mdt < dt 
+             let ps = hlookup Time p :: PredSet Seconds
+             let mt = maxTime ps :: Seconds
+             if mt < t 
              then
-              do let s' = hmod Dt (const mdt :: Double -> Double) s
-                 put (prevt + mdt, s')
+              do let s' = hmod Time (onV (const mt)) s 
+                 put s'
                  return s'
              else 
               do evs <- lift getSDLEvs
                  let s'  = foldl handleEv s evs
-                 let s'' = hmod Dt (const dt) s'
-                 put (t,s'')
+                 let s'' = hmod Time (onV (const t)) s'
+                 put s''
                  return s''
              
 
-maxTime ts | null ms = 1.0 / 0
+maxTime (PredSet ts) | null ms = 1.0 / 0
            | otherwise =  maximum ms
   where ms = mapFilter fromEq (elems ts)
-        fromEq (Leq n) = Just n
+        fromEq (Eq n) = Just n
         fromEq _       = Nothing
 
 mapFilter :: (a -> Maybe b) -> [a] -> [b]
@@ -85,10 +86,12 @@ getSDLEvs = pollEvent >>=
               _ -> do  t <- getSDLEvs
                        return (h:t)
 
-handleEv :: SDLVals -> SDL.Event -> SDLVals
-handleEv l (MouseMotion x y _ _)    = hmod MousePos (const (fromIntegral x :: Double,fromIntegral y :: Double)) l
-handleEv l (MouseButtonDown _ _ x)  = hmod MouseBtns (insert (toM x)) l
-handleEv l (MouseButtonUp  _ _ x)   = hmod MouseBtns (delete (toM x)) l
+
+
+handleEv :: SDLVals -> SDL.Event -> (SDLVars V)
+handleEv l (MouseMotion x y _ _)    = hmod MousePos (onV (const (fromIntegral x :: Double,fromIntegral y :: Double))) l
+handleEv l (MouseButtonDown _ _ x)  = hmod MouseBtns (onV (insert (toM x))) l
+handleEv l (MouseButtonUp  _ _ x)   = hmod MouseBtns (onV (delete (toM x))) l
 handleEv l _                        = l
 
 curTime = do t <-  getTicks
@@ -99,5 +102,5 @@ toM ButtonMiddle  = MMiddle
 toM ButtonRight   = MRight
 toM _             = MMiddle
 
-
+--}
 
