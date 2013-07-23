@@ -57,15 +57,14 @@ doublerr = constant NoEvent where
 --type MouseDown = Event (Set.Set MouseBtn)
 --type MouseUp = Event (Set.Set MouseBtn)
 
-cycleColor :: SF (MouseDown,MouseUp) (Color, Event Int)
+cycleColor :: SF MouseDown (Color, Event Int)
 cycleColor = cc colors 1 where
   cc (h : t) i = 
-    switch 
-      (proc (md,mu) -> do
-          mc  <- notYet <<< middleClick  -< md
-          rc  <- rightClick   -< md
-          returnA -< ((h,fmap (const i) rc), mc))
-      (\_ -> cc t (i+1))
+    switch ( proc md -> do
+         mc  <- notYet <<< middleClick  -< md
+         rc  <- rightClick              -< md
+         returnA -< ((h,tag rc i), mc)
+    ) (\_ -> cc t (i+1))
            
 wiggleRect :: Rect -> SF a Rect
 wiggleRect (Rect lu rd) = localTime >>> arr rectAtTime
@@ -86,7 +85,7 @@ chooseBoxColor :: Rect -> SF SDLIn (Box, Event Box)
 chooseBoxColor rect =
   proc (md,mu,_) -> do
     r' <- wiggleRect rect -< ()
-    (c,e)  <- cycleColor -< (md,mu)
+    (c,e)  <- cycleColor -< md
     box <- arr (uncurry Box) -< (r',c) 
     returnA -< (box,fmap (const box) e)   
 
@@ -120,12 +119,8 @@ type In = (MouseDown, MouseUp,MousePos)
 
 boxes :: SF In [Box]
 boxes = boxes' [] >>> arr (map fst) where
-  boxes' i = 
-    pSwitchList i
-    (proc (s,l) -> do
-      del <- arr toEv -< l
-      new <- newBox -< s
-      notYet <<< arr choose -< (new, del))
+  boxes' i = pSwitchList i
+    (newBox *** arr toEv >>> arr choose >>> notYet)
     (\e l -> boxes' (mutateList e l))
   choose (a,b) = merge (fmap Left a) (fmap Right b)
   toEv l = let l' = map (isNoEvent . snd) l in if and l' then NoEvent else Event l'
