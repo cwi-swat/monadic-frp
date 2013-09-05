@@ -1,4 +1,4 @@
-Code accompanying the paper "Symmetric Functional Reactive Programming"
+Code accompanying the paper "Monadic Functional Reactive Programming"
 
 The documentation is at http://homepages.cwi.nl/~ploeg/sfrpdocs/
 
