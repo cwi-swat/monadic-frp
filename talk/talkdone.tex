@@ -325,17 +325,19 @@ Examples: \begin{itemize}
 \end{itemize}
 \end{block}
 \pause
-\begin{block}{Functional Reactive Programming(FRP)}
-Umbrella term for ways to describe and composing reactive components in a functional way.
+\begin{block}{Functional Reactive Programming (FRP)}
+Umbrella term for ways to describe and composing reactive components in functional style.
 \end{block}
 \end{frame}
 
-\begin{frame}{Monadic Functional Reactive Programming}
+\begin{frame}{What is Monadic FRP?}
+\begin{block}{Monadic FRP is ...}
 \begin{enumerate}
 \item A novel Monadic programmer interface for FRP
 \item A novel evaluation mechanism for FRP
 
 \end{enumerate}
+\end{block}
 \end{frame}
 
 \section{Programmer interface}
@@ -343,26 +345,48 @@ Umbrella term for ways to describe and composing reactive components in a functi
 \begin{frame}{Reactive computations}
 
 \begin{block}{Reactive computation}
-A monadic computation which may require the occurance of external events to continue
+A monadic computation which may require the occurrence of external events to continue
 \end{block}
-
+\vspace{-0.3cm}
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\mathbf{data}\;\Conid{R}\;\Varid{ev}\;\Varid{a}\approx\Conid{Await}\;(\Varid{ev}\to \Conid{React}\;\Varid{a})\mid \Conid{Done}\;\Varid{a}{}\<[E]%
+\>[B]{}\mathbf{data}\;\Conid{R}\;\Varid{ev}\;\Varid{a}\approx\Conid{Await}\;(\Varid{ev}\to \Conid{R}\;\Varid{ev}\;\Varid{a})\mid \Conid{Done}\;\Varid{a}{}\<[E]%
 \\[\blanklineskip]%
 \>[B]{}\mathbf{instance}\;\Conid{Monad}\;(\Conid{R}\;\Varid{ev})\;\mathbf{where}\dots{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
-Example:
+\vspace{-0.6cm}
+\pause
+\begin{block}{Example}
+\vspace{-0.4cm}
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{13}{@{}>{\hspre}c<{\hspost}@{}}%
 \column{13E}{@{}l@{}}%
 \column{16}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{17}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{38}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{39}{@{}>{\hspre}c<{\hspost}@{}}%
+\column{39E}{@{}l@{}}%
+\column{41}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{47}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\Varid{sameClick}\mathbin{::}\Conid{React}\;\Conid{GUIEv}\;\Conid{Bool}{}\<[E]%
+\>[B]{}\mathbf{data}\;\Conid{GUIEv}{}\<[13]%
+\>[13]{}\mathrel{=}{}\<[13E]%
+\>[16]{}\Conid{MDown}\;\{\mskip1.5mu \Varid{but}\mathbin{::}\Conid{Int}\mskip1.5mu\}\mid {}\<[39]%
+\>[39]{}\dots{}\<[39E]%
+\\
+\>[B]{}\Varid{mouseDown}\mathbin{::}\Conid{R}\;\Conid{GUIEv}\;\Conid{Int}{}\<[E]%
+\\
+\>[B]{}\Varid{mouseDown}\mathrel{=}\Conid{Await}\;(\lambda \Varid{x}\to \mathbf{case}\;\Varid{x}\;\mathbf{of}\;{}\<[38]%
+\>[38]{}\Conid{MDown}\;\Varid{i}{}\<[47]%
+\>[47]{}\to \Conid{Done}\;\Varid{i}{}\<[E]%
+\\
+\>[38]{}\anonymous {}\<[41]%
+\>[41]{}\to \Varid{mouseDown}){}\<[E]%
+\\[\blanklineskip]%
+\>[B]{}\Varid{sameClick}\mathbin{::}\Conid{R}\;\Conid{GUIEv}\;\Conid{Bool}{}\<[E]%
 \\
 \>[B]{}\Varid{sameClick}\mathrel{=}\mathbf{do}\;{}\<[17]%
 \>[17]{}\Varid{p1}\leftarrow \Varid{mouseDown}{}\<[E]%
@@ -370,15 +394,10 @@ Example:
 \>[17]{}\Varid{p2}\leftarrow \Varid{mouseDown}{}\<[E]%
 \\
 \>[17]{}\Varid{return}\;(\Varid{p1}\equiv \Varid{p2}){}\<[E]%
-\\[\blanklineskip]%
-\>[B]{}\mathbf{data}\;\Conid{GUIEv}{}\<[13]%
-\>[13]{}\mathrel{=}{}\<[13E]%
-\>[16]{}\Conid{MDown}\;\{\mskip1.5mu \Varid{but}\mathbin{::}\Conid{Int}\mskip1.5mu\}{}\<[E]%
-\\
-\>[13]{}\mid {}\<[13E]%
-\>[16]{}\dots{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
+\vspace{-0.6cm}
+\end{block}
 \end{frame}
 
 \begin{frame}{Parallel reactive computation composition}
@@ -386,7 +405,7 @@ Example:
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\Varid{first}\mathbin{::}\Conid{R}\;\Varid{ev}\;\Varid{a}\to \Conid{R}\;\Varid{ev}\;\Varid{b}\to \Conid{R}\;\Varid{ev}\;(\Conid{R}\;\Varid{ev}\;\Varid{a},\Conid{R}\;\Varid{ev}\;\Varid{b}){}\<[E]%
+\>[B]{}\Varid{race}\mathbin{::}\Conid{R}\;\Varid{ev}\;\Varid{a}\to \Conid{R}\;\Varid{ev}\;\Varid{b}\to \Conid{R}\;\Varid{ev}\;(\Conid{R}\;\Varid{ev}\;\Varid{a},\Conid{R}\;\Varid{ev}\;\Varid{b}){}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 Runs both reactive computations in parallel until either
@@ -402,7 +421,7 @@ Example:
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\Varid{before}\mathbin{::}\Conid{R}\;\Varid{ev}\;\Varid{a}\to \Conid{R}\;\Varid{ev}\;\Varid{b}\to \Conid{R}\;\Varid{ev}\;\Conid{Bool}{}\<[E]%
 \\
-\>[B]{}\Varid{before}\;\Varid{a}\;\Varid{b}\mathrel{=}\Varid{fmap}\;\Varid{cmp}\;(\Varid{first}\;\Varid{a}\;\Varid{b}){}\<[E]%
+\>[B]{}\Varid{before}\;\Varid{a}\;\Varid{b}\mathrel{=}\Varid{fmap}\;\Varid{cmp}\;(\Varid{race}\;\Varid{a}\;\Varid{b}){}\<[E]%
 \\
 \>[B]{}\hsindent{3}{}\<[3]%
 \>[3]{}\mathbf{where}\;{}\<[10]%
@@ -410,12 +429,12 @@ Example:
 \\
 \>[10]{}\Varid{cmp}\;(\Conid{Done}\;\Varid{a},\anonymous )\mathrel{=}\Conid{True}{}\<[E]%
 \\[\blanklineskip]%
-\>[B]{}\Varid{doubler}\mathbin{::}\Conid{React}\;\Conid{GUIEv}\;(){}\<[E]%
+\>[B]{}\Varid{doubler}\mathbin{::}\Conid{R}\;\Conid{GUIEv}\;(){}\<[E]%
 \\
 \>[B]{}\Varid{doubler}\mathrel{=}\mathbf{do}\;{}\<[15]%
 \>[15]{}\Varid{rightClick}{}\<[E]%
 \\
-\>[15]{}\Varid{r}\leftarrow \Varid{rightClick}\mathbin{`\Varid{before}`}\Varid{sleep}\;\mathrm{0}\mathbin{:}\mathrm{2}{}\<[E]%
+\>[15]{}\Varid{r}\leftarrow \Varid{rightClick}\mathbin{`\Varid{before}`}\Varid{sleep}\;\mathrm{0.2}{}\<[E]%
 \\
 \>[15]{}\mathbf{if}\;\Varid{r}\;\mathbf{then}\;\Varid{return}\;()\;\mathbf{else}\;\Varid{doubler}{}\<[E]%
 \ColumnHook
@@ -426,22 +445,23 @@ Example:
 A reactive computation that may also \alert{emit} values
 \begin{itemize}
 \item Can \alert{end}
-\item Describes the entire life time of something.
+\item Describes the entire life time of something
 \item Also a monad $\rightarrow$ composing phases
 \item Defined in terms of reactive computations
 \end{itemize}
 
 \end{block}
-\only<1>{
+\pause
+\only<2>{
 Example: Modal dialog that asks the users name
 \begin{enumerate}
 \item Wait for dialog to be needed
 \item Emit first form of the dialog
 \item Emit new forms of the dialog as the user interacts with the dialog
-\item Return name of user
+\item End \& return name of user
 \end{enumerate}
 }
-\only<2>{
+\only<3>{
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{11}{@{}>{\hspre}l<{\hspost}@{}}%
@@ -467,22 +487,27 @@ Example: Modal dialog that asks the users name
 &
 \includegraphics[width=0.3\textwidth]{02.png}
 \end{tabular}
+\pause
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{9}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{11}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{15}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{27}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\mathbf{type}\;\Conid{Box}\mathrel{=}(\Conid{Rect},\Conid{Color}){}\<[E]%
 \\
 \>[B]{}\Varid{define}{}\<[15]%
-\>[15]{}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;\Conid{Box}\;\Conid{Rect}{}\<[E]%
+\>[15]{}\mathbin{::}{}\<[27]%
+\>[27]{}\Conid{S}\;\Conid{GUIEv}\;\Conid{Box}\;\Conid{Rect}{}\<[E]%
 \\
 \>[B]{}\Varid{chooseColor}{}\<[15]%
-\>[15]{}\mathbin{::}\Conid{Rect}\to \Conid{S}\;\Conid{GUIEvBox}\;\Conid{Color}{}\<[E]%
+\>[15]{}\mathbin{::}\Conid{Rect}\to {}\<[27]%
+\>[27]{}\Conid{S}\;\Conid{GUIEv}\;\Conid{Box}\;\Conid{Color}{}\<[E]%
 \\
 \>[B]{}\Varid{clickOn}{}\<[15]%
-\>[15]{}\mathbin{::}\Conid{Rect}\to \Conid{R}\;\Conid{GUIEv}\;(){}\<[E]%
+\>[15]{}\mathbin{::}\Conid{Rect}\to {}\<[27]%
+\>[27]{}\Conid{R}\;\Conid{GUIEv}\;(){}\<[E]%
 \\
 \>[B]{}\Varid{box}\mathbin{::}{}\<[9]%
 \>[9]{}\Conid{S}\;\Conid{GUIEv}\;\Conid{Box}\;(){}\<[E]%
@@ -524,7 +549,7 @@ Example: Cycle trough colors until right click
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\Varid{cycleColor}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;\Conid{Color}\;\Conid{Int}{}\<[E]%
 \\
-\>[B]{}\Varid{cycleColor}\mathrel{=}\Varid{cc}\;\Varid{colors}\;\mathrm{1}\;\mathbf{where}{}\<[E]%
+\>[B]{}\Varid{cycleColor}\mathrel{=}\Varid{cc}\;\Varid{colors}\;\mathrm{0}\;\mathbf{where}{}\<[E]%
 \\
 \>[B]{}\hsindent{4}{}\<[4]%
 \>[4]{}\Varid{cc}\;(\Varid{h}\mathbin{:}\Varid{t})\;\Varid{i}\mathrel{=}{}\<[E]%
@@ -542,34 +567,69 @@ Example: Cycle trough colors until right click
 \end{frame}
 
 \begin{frame}{Dynamic lists}
-\begin{center}
-\includegraphics[width=0.3\textwidth]{05.png}
-\end{center}
-
-
+\begin{tabular}{c c}
+   \includegraphics[width=0.3\textwidth]{05.png} &
+ \begin{minipage}[b]{0.5\textwidth}
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{7}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
+\>[B]{}\Varid{box}{}\<[7]%
+\>[7]{}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;\Conid{Box}\;(){}\<[E]%
+\\[\blanklineskip]%
 \>[B]{}\Varid{boxes}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;[\mskip1.5mu \Conid{Box}\mskip1.5mu]\;(){}\<[E]%
 \\
 \>[B]{}\Varid{boxes}\mathrel{=}\Varid{rList}\;\Varid{box}{}\<[E]%
 \\[\blanklineskip]%
-\>[B]{}\Varid{rList}\mathbin{::}\Conid{S}\;\Varid{ef}\;\Varid{f}\;\Varid{a}\to \Conid{S}\;\Varid{ef}\;[\mskip1.5mu \Varid{f}\mskip1.5mu]\;(){}\<[E]%
-\\
-\>[B]{}\Varid{box}{}\<[7]%
-\>[7]{}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;\Conid{Box}\;(){}\<[E]%
+\>[B]{}\Varid{rList}\mathbin{::}\Conid{S}\;\Varid{ev}\;\Varid{f}\;()\to \Conid{S}\;\Varid{ev}\;[\mskip1.5mu \Varid{f}\mskip1.5mu]\;(){}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
+\end{minipage}
+\end{tabular}
+
+
+
+
 
 \begin{itemize}
 \item Start a new \ensuremath{\Varid{box}} computation, and when it starts, add it to the list and repeat
 \item If a \ensuremath{\Varid{box}} computation ends remove it from the list
+\item If a \ensuremath{\Varid{box}} computation emits a new value update its value in the list
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Programmer interface summary}
-
+\begin{block}{Reactive computations}
+A monadic computation which may require the occurrence of external events to continue
+\begin{hscode}\SaveRestoreHook
+\column{B}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{E}{@{}>{\hspre}l<{\hspost}@{}}%
+\>[B]{}\mathbf{data}\;\Conid{R}\;\Varid{ev}\;\Varid{a}\approx\Conid{Await}\;(\Varid{ev}\to \Conid{R}\;\Varid{ev}\;\Varid{a})\mid \Conid{Done}\;\Varid{a}{}\<[E]%
+\\
+\>[B]{}\mathbf{instance}\;\Conid{Monad}\;(\Conid{R}\;\Varid{ev})\;\mathbf{where}\dots{}\<[E]%
+\\
+\>[B]{}\Varid{race}\mathbin{::}\Conid{R}\;\Varid{ev}\;\Varid{a}\to \Conid{R}\;\Varid{ev}\;\Varid{b}\to \Conid{R}\;\Varid{ev}\;(\Conid{R}\;\Varid{ev}\;\Varid{a},\Conid{R}\;\Varid{ev}\;\Varid{b}){}\<[E]%
+\ColumnHook
+\end{hscode}\resethooks
+\end{block}
+\begin{block}{Signal computations}
+A reactive computation that may also emit values
+\begin{hscode}\SaveRestoreHook
+\column{B}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{11}{@{}>{\hspre}l<{\hspost}@{}}%
+\column{E}{@{}>{\hspre}l<{\hspost}@{}}%
+\>[B]{}\mathbf{newtype}\;\Conid{S}\;\Varid{ev}\;\Varid{f}\;\Varid{r}\mathrel{=}\dots{}\<[E]%
+\\
+\>[B]{}\mathbf{instance}\;\Conid{Monad}\;(\Conid{S}\;\Varid{ev}\;\Varid{f})\;\mathbf{where}\dots{}\<[E]%
+\\
+\>[B]{}\Varid{waitFor}{}\<[11]%
+\>[11]{}\mathbin{::}\Conid{R}\;\Varid{ev}\;\Varid{r}\to \Conid{S}\;\Varid{ev}\;\Varid{f}\;\Varid{r}{}\<[E]%
+\\
+\>[B]{}\Varid{emit}{}\<[11]%
+\>[11]{}\mathbin{::}\Varid{f}\to \Conid{S}\;\Varid{ev}\;\Varid{f}\;(){}\<[E]%
+\ColumnHook
+\end{hscode}\resethooks
+\end{block}
 \end{frame}
 
 \section{Programmer interface comparison}
@@ -582,7 +642,7 @@ Monadic FRP:
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\Varid{cycleColor}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;\Conid{Color}\;\Conid{Int}{}\<[E]%
 \\
-\>[B]{}\Varid{cycleColor}\mathrel{=}\Varid{cc}\;\Varid{colors}\;\mathrm{1}\;\mathbf{where}{}\<[E]%
+\>[B]{}\Varid{cycleColor}\mathrel{=}\Varid{cc}\;\Varid{colors}\;\mathrm{0}\;\mathbf{where}{}\<[E]%
 \\
 \>[B]{}\hsindent{3}{}\<[3]%
 \>[3]{}\Varid{cc}\;(\Varid{h}\mathbin{:}\Varid{t})\;\Varid{i}\mathrel{=}\mathbf{do}{}\<[E]%
@@ -608,7 +668,7 @@ Arrowized FRP:
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\Varid{cycleColor}\mathbin{::}\Conid{SF}\;\Conid{MouseDown}\;(\Conid{Color},\Conid{Event}\;\Conid{Int}){}\<[E]%
 \\
-\>[B]{}\Varid{cycleColor}\mathrel{=}\Varid{cc}\;\Varid{colors}\;\mathrm{1}\;\mathbf{where}{}\<[E]%
+\>[B]{}\Varid{cycleColor}\mathrel{=}\Varid{cc}\;\Varid{colors}\;\mathrm{0}\;\mathbf{where}{}\<[E]%
 \\
 \>[B]{}\hsindent{3}{}\<[3]%
 \>[3]{}\Varid{cc}\;(\Varid{h}\mathbin{:}\Varid{t})\;\Varid{i}\mathrel{=}\Varid{switch}\;(\Varid{proc}\;\Varid{md}\to \mathbf{do}{}\<[E]%
@@ -638,9 +698,9 @@ Monadic FRP:
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\Varid{boxes}\mathbin{::}\Conid{S}\;[\mskip1.5mu \Conid{Box}\mskip1.5mu]\;(){}\<[E]%
+\>[B]{}\Varid{boxes}\mathbin{::}\Conid{S}\;\Conid{GUIEv}\;[\mskip1.5mu \Conid{Box}\mskip1.5mu]\;(){}\<[E]%
 \\
-\>[B]{}\Varid{boxes}\mathrel{=}\Varid{dynList}\;(\Varid{spawn}\;\Varid{box}){}\<[E]%
+\>[B]{}\Varid{boxes}\mathrel{=}\Varid{rList}\;\Varid{box}{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 Arrowized FRP:
@@ -684,33 +744,37 @@ Arrowized FRP:
 \end{frame}
 
 \begin{frame}{Advantages \& disadvantages of Monadic FRP API}
-Advantages: 
+\begin{block}{Advantages}
 \begin{itemize}
 \item Implicit routing
 \item Sequencing phases is easier \& more intuitive.
 \item Easier dynamic lists 
 \end{itemize}
-Disadvantages:
+\end{block}
+\begin{block}{Disadvantages}
 \begin{itemize}
 \item Currently no reactive-level recursion
 \item Explicit memoization needed for reactive-level sharing
 \end{itemize}
+\end{block}
 \end{frame}
 
 \section{Evaluation model}
 \begin{frame}{Evaluation model: context}
-Other FRP evaluation models either:
+\begin{block}{Other FRP evaluation models either ...}
 \begin{itemize}
 \item Re-evaluate the whole expression after each event
-\item Use side-effects to prevent redundant re-evalutions
+\item Use side-effects to prevent redundant re-evaluations
 \end{itemize}
-
-Monadic FRP has the first \emph{purely functional} evaluation model that prevents redundant re-evaluations.
-
+\end{block}
+\pause
+\begin{block}{Monadic FRP ...}
+has the first \emph{purely functional} evaluation model that prevents redundant re-evaluations
+\end{block}
 \end{frame}
 
 \begin{frame}{Idea}
-We do not know if a reactive computation an event will have any effect on a reactive computation:
+We do not know if an event will have any effect on a reactive computation:
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{14}{@{}>{\hspre}c<{\hspost}@{}}%
@@ -719,14 +783,14 @@ We do not know if a reactive computation an event will have any effect on a reac
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\mathbf{data}\;\Conid{R}\;\Varid{ev}\;\Varid{a}{}\<[14]%
 \>[14]{}\approx{}\<[14E]%
-\>[18]{}\Conid{Await}\;(\Varid{ev}\to \Conid{React}\;\Varid{a}){}\<[E]%
+\>[18]{}\Conid{Await}\;(\Varid{ev}\to \Conid{R}\;\Varid{ev}\;\Varid{a}){}\<[E]%
 \\
 \>[14]{}\mid {}\<[14E]%
 \>[18]{}\Conid{Done}\;\Varid{a}{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 \pause
-Communicate which events a reactive computation is intrested in:
+Communicate which events a reactive computation is interested in:
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{14}{@{}>{\hspre}c<{\hspost}@{}}%
@@ -735,13 +799,13 @@ Communicate which events a reactive computation is intrested in:
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
 \>[B]{}\mathbf{data}\;\Conid{R}\;\Varid{ev}\;\Varid{a}{}\<[14]%
 \>[14]{}\approx{}\<[14E]%
-\>[18]{}\Conid{Await}\;(\Conid{Requests}\;\Varid{ev})\;(\Varid{ev}\to \Conid{React}\;\Varid{a}){}\<[E]%
+\>[18]{}\Conid{Await}\;(\Conid{Requests}\;\Varid{ev})\;(\Varid{ev}\to \Conid{R}\;\Varid{ev}\;\Varid{a}){}\<[E]%
 \\
 \>[14]{}\mid {}\<[14E]%
 \>[18]{}\Conid{Done}\;\Varid{a}{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
-No reevalution: Only call a continuation if it is intrested in the occured event
+No re-evaluation: Only call a continuation if the reactive computation is interested in the occurred event
 
 \end{frame}
 
@@ -749,9 +813,9 @@ No reevalution: Only call a continuation if it is intrested in the occured event
 
 \begin{itemize}
 \item \ensuremath{\Varid{a}\bind \Varid{b}} requests the same events as \ensuremath{\Varid{a}}
-\item \ensuremath{\Varid{first}\;\Varid{a}\;\Varid{b}} requests the union of the requests of \ensuremath{\Varid{a}} and \ensuremath{\Varid{b}} 
+\item \ensuremath{\Varid{race}\;\Varid{a}\;\Varid{b}} requests the union of the requests of \ensuremath{\Varid{a}} and \ensuremath{\Varid{b}} 
 \end{itemize}
-All other (Signal computation) combinators are expressed in terms of \ensuremath{\bind } and \ensuremath{\Varid{first}}
+All other (Signal computation) combinators are expressed in terms of \ensuremath{\bind } and \ensuremath{\Varid{race}}
 
 \end{frame}
 
@@ -765,9 +829,9 @@ All other (Signal computation) combinators are expressed in terms of \ensuremath
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {\ensuremath{\Varid{first}}}
+\node[bag, name=root] {\ensuremath{\Varid{race}}}
   [sibling distance=4.5cm]
-  child {node[bag] {\ensuremath{\Varid{first}}}[sibling distance=2cm]
+  child {node[bag] {\ensuremath{\Varid{race}}}[sibling distance=2cm]
     child {node[bag] {\ensuremath{\Varid{mouseMove}}}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -799,7 +863,7 @@ child {node[bag] {\ensuremath{\Varid{mouseDown}}}
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\Varid{first}\;(\Varid{first}\;\Varid{mouseMove}\;\Varid{mouseUp})\;(\Varid{mouseDown}\sequ \Varid{deltaTime}){}\<[E]%
+\>[B]{}\Varid{race}\;(\Varid{race}\;\Varid{mouseMove}\;\Varid{mouseUp})\;(\Varid{mouseDown}\sequ \Varid{deltaTime}){}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 \end{frame}
@@ -810,9 +874,9 @@ child {node[bag] {\ensuremath{\Varid{mouseDown}}}
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {\ensuremath{\Varid{first}}}
+\node[bag, name=root] {\ensuremath{\Varid{race}}}
   [sibling distance=4.5cm]
-  child {node[bag] {\ensuremath{\Varid{first}}}[sibling distance=2cm]
+  child {node[bag] {\ensuremath{\Varid{race}}}[sibling distance=2cm]
     child {node[bag] {\ensuremath{\Varid{mouseMove}}}
        edge from parent[-,dashed]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -831,7 +895,7 @@ child {node[bag] {\ensuremath{\Varid{mouseDown}}}
        node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
     }
     child {node[bag] {\ensuremath{\Varid{deltaTime}}}
-       edge from parent[-,dashed]
+       edge from parent[-,dashed,thin]
     }
        edge from parent[->,very thick]
        node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
@@ -845,7 +909,7 @@ child {node[bag] {\ensuremath{\Varid{mouseDown}}}
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\Varid{first}\;(\Varid{first}\;\Varid{mouseMove}\;\Varid{mouseUp})\;(\Varid{mouseDown}\sequ \Varid{deltaTime}){}\<[E]%
+\>[B]{}\Varid{race}\;(\Varid{race}\;\Varid{mouseMove}\;\Varid{mouseUp})\;(\Varid{mouseDown}\sequ \Varid{deltaTime}){}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
 \end{frame}
@@ -855,9 +919,9 @@ child {node[bag] {\ensuremath{\Varid{mouseDown}}}
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {\ensuremath{\Varid{first}}}
+\node[bag, name=root] {\ensuremath{\Varid{race}}}
   [sibling distance=4.5cm]
-  child {node[bag] {\ensuremath{\Varid{first}}}[sibling distance=2cm]
+  child {node[bag] {\ensuremath{\Varid{race}}}[sibling distance=2cm]
     child {node[bag] {\ensuremath{\Varid{mouseMove}}}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -882,9 +946,55 @@ child {node[bag] {\ensuremath{\Varid{mouseDown}}}
 \begin{hscode}\SaveRestoreHook
 \column{B}{@{}>{\hspre}l<{\hspost}@{}}%
 \column{E}{@{}>{\hspre}l<{\hspost}@{}}%
-\>[B]{}\Varid{first}\;(\Varid{first}\;\Varid{mouseMove}\;\Varid{mouseUp})\;\Varid{deltaTime}{}\<[E]%
+\>[B]{}\Varid{race}\;(\Varid{race}\;\Varid{mouseMove}\;\Varid{mouseUp})\;\Varid{deltaTime}{}\<[E]%
 \ColumnHook
 \end{hscode}\resethooks
+\end{frame}
+
+\begin{frame}{Why purely functional FRP evaluation matters}
+
+Purely functional FRP evaluation $\rightarrow$ Reactive level immutability
+
+\begin{itemize}
+\item Can see different ``Futures'' \\ Examples:
+\begin{itemize}
+\item Duplicate drawing in drawing program into two tabs
+\item Undo
+\item What-if?
+\end{itemize}
+
+\item Impossible with impure evaluation model
+\end{itemize}
+
+\end{frame}
+\section{Summary}
+
+\begin{frame}{Monadic FRP: Conclusion}
+\begin{itemize}
+\item Programmer interface
+\begin{itemize}
+\item Basic concepts: Reactive \& Signal computations
+\item Advantages: \begin{itemize}
+\item Implicit routing
+\item Sequencing phases is easier \& more intuitive.
+\item Easier dynamic lists 
+\end{itemize}
+\end{itemize}
+
+\item Evaluation model
+\begin{itemize} 
+\item First purely functional FRP evaluation model that avoids hat prevents redundant re-evaluations.
+\item Purely functional FRP evaluation $\rightarrow$ Reactive level immutability
+\end{itemize}
+
+\item Future work
+\begin{itemize} 
+\item Implicit reactive level sharing
+\item Reactive level recursion
+\end{itemize}
+\end{itemize}
+\pause
+Questions?
 \end{frame}
 
 \end{document}

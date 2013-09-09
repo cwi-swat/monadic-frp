@@ -6,6 +6,7 @@ import Prelude
 import Graphics.UI.SDL hiding (update,Rect,Color,Event)
 import Reactive hiding (foldl,map)
 import HEnv 
+import ReactiveHEnv
 import Data.Set hiding (foldl, map, null)
 import qualified Data.Set as Set
 import qualified Graphics.UI.SDL as SDL
@@ -20,12 +21,12 @@ import Boxes
 data MouseBtn  = MLeft | MMiddle | MRight deriving (Ord,Eq,Show)
 type Seconds = Double
 
-data MouseBtns  = MouseBtns
-data MousePos   = MousePos
-data Time       = Time
-instance Var MouseBtns (Set MouseBtn) where getVar = MouseBtns
-instance Var MousePos Point  where getVar = MousePos
-instance Var Time Seconds where getVar = Time
+data MouseBtns  = MouseBtns deriving Show
+data MousePos   = MousePos deriving Show
+data Time       = Time deriving Show
+instance Var MouseBtns (Set MouseBtn) 
+instance Var MousePos Point 
+instance Var Time Seconds 
 
 
 type SDLVars = (MouseBtns :-> Set MouseBtn :& MousePos :-> Point :& Time :-> Seconds :& X)

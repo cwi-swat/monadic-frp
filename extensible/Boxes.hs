@@ -5,12 +5,18 @@ import Graphics.UI.SDL hiding (update,Rect,Color,Event)
 import qualified Graphics.UI.SDL as SDL
 type Point     = (Double,Double) -- in pixels
 
-data Rect    = Rect {leftup :: Point, rightdown :: Point} deriving Show
-data Color   = Color {  r :: Double, g :: Double, b :: Double} deriving Show
-data Box     = Box Rect Color deriving Show
+data Rect    = Rect {leftup :: Point, rightdown :: Point} deriving (Ord,Eq,Show)
+data Color   = Color {  r :: Double, g :: Double, b :: Double} deriving (Ord,Eq,Show)
+data Box     = Box Rect Color deriving (Ord,Eq,Show)
 
 
 normalize (Rect (lx,uy) (rx,dy)) = Rect (min lx rx, min uy dy) (max lx rx, max uy dy)
+
+lerpColor t (Color r g b) (Color r' g' b') = Color (lerp r r' t) (lerp g g' t) (lerp b b' t)
+
+lerp a b t = (1 -t) * a + t * b
+
+lerpPoint (x,y) (x',y') t = (lerp x x' t, lerp y y' t)
 
 toRect :: Rect -> SDL.Rect
 toRect (normalize -> Rect (lx,uy) (rx,dy)) = SDL.Rect (round lx) (round uy) (round (rx - lx)) (round (dy - uy))
