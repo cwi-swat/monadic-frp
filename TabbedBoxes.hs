@@ -102,8 +102,8 @@ animateExitDown    b = animateMove (\t -> moveBoxes ((0,-screenHeight) *. t) b)
 
 tabbedBoxes = tabs 0 (singleton (iparList (spawn box)))
 
-screenWidth  = 1200
-screenHeight = 1000
+screenWidth  = 1024
+screenHeight = 768
 screenSize   = (screenWidth,screenHeight)
 
 delete i l = let (a,b) = splitAt i l in a >< (drop 1 b)

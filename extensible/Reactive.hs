@@ -3,40 +3,16 @@
 module Reactive where
 
 import HEnv
+import ReactiveHEnv
 import Data.Maybe
 import Data.Set hiding (map,filter,foldl)
 import qualified Data.Set as Set
 import Prelude hiding (lookup,null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl,mod,all)
 import Control.Monad.Trans
 
-data Predicate a = Any | Neq a | Eq a | DontCare deriving (Ord,Show,Eq)
-
-data V x = V x
-onV f (V x) = V (f x)
-
-data PredSet a = PredSet (Set (Predicate a))
-
-sat v Any = True
-sat v (Neq q) = v /= q
-sat v (Eq a) = v == a
-sat v DontCare  = False
-
-
-satSet ::  Ord v =>  V v -> PredSet v -> Bool -> Bool
-satSet (V v) (PredSet s) b = Set.fold (||) False (Set.map (sat v) s) || b
-
-satisfies :: MMapOps l => l V -> l PredSet -> Bool
-satisfies l r =  hfoldzip satSet False l r
-
-zipPreds :: MMapOps l => l PredSet -> l PredSet -> l PredSet
-zipPreds l r = hzip punion l r
-  where punion (PredSet a) (PredSet b) = PredSet (a `union` b)
-
-
 data React l a 
   = Done a
   | Await (l PredSet) (l V -> React l a)
-
 
 instance Monad (React l) where
   return              = Done
@@ -45,11 +21,11 @@ instance Monad (React l) where
 
 
 first
-  :: MMapOps l =>
+  :: (UnionPreds l, Satisfies l) =>
      React l a -> React l b -> React l (React l a, React l b)
 first l r = case (l,r) of
   (Await el _, Await er _) -> 
-      let  e    = el `zipPreds` er
+      let  e    = el `unionPreds` er
            c b  = first (update l b) (update r b)
       in Await e c
   _ -> Done (l,r)
@@ -64,7 +40,7 @@ updateOnce (Await e c) b  | satisfies b e = c b
 updateOnce r           _  = r
 
 exper
-  :: (Var n v, Has n v l, Build l) =>
+  :: (Var n v, Has n v l, Build l, Ord v) =>
      n -> Predicate v -> React l v
 exper n p = Await ps (\s -> Done $ let V v = hlookup n s in v)
   where ps = hmod n addPred emptyPreds
@@ -187,7 +163,7 @@ l `indexBy` (Sig r) =
 l  `iindexBy` (Sig r)  = 
   do  (l,r) <- waitFor (ires (l `iuntil` r))
       case (l,r) of
-       (hl :| tl, Done (hr :| tr)) -> emit hl >> (hl :| tl) `iindexBy` tr
+       (hl :| tl, Done (hr :| tr)) -> emit (hl,hr) >> (hl :| tl) `iindexBy` tr
        _                           -> return ()
 
 -- * Conversion
@@ -199,6 +175,8 @@ emit a = emitAll (a :| return ())
 pure a     = emit a >> hold   
 -- | Convert a reactive computation to a signal computation.
 waitFor a  = Sig (fmap End a)
+
+active (Sig a) = a
 -- | The reactive computation that never completes.
 hold       = waitFor never 
 
@@ -248,8 +226,29 @@ all n = waitFor (exper n Any) >>= change
    where change v = emit v >> waitFor (exper n (Neq v)) >>= change
           
 
+laste (Sig t) = do t' <- waitFor t
+                   case t' of
+                    h :| t -> emit h >> ilast h t
+                    _ -> return Nothing
+ where ilast p (Sig t) = 
+            do t' <- waitFor t
+               case t' of
+                   h :| t -> emit h >> ilast h t
+                   _ -> return (Just p)
+
 change n f = do v1 <- exper n Any
                 v2 <- exper n (Neq v1)
                 return (f v1 v2)
+
+filter f (Sig s) = 
+   do s' <- waitFor s
+      case s' of
+        h :| t | f h -> emit h >> filter f t
+               | otherwise -> filter f t
+        End a -> return a
+
+
+during l r = map snd $ filter fst (r `indexBy` l)
+                     
 
 

@@ -62,7 +62,7 @@ drawBoxes s l =
 
 interpretBoxes (x,y) r = 
   do SDL.init [InitEverything]
-     setVideoMode (floor x) (floor y) 32 [DoubleBuf]
+     setVideoMode (floor x) (floor y) 32 [DoubleBuf,Fullscreen]
      screen <- getVideoSurface
      t <- curTime
      let drawBoxes' r = lift (drawBoxes screen r)
@@ -120,6 +120,7 @@ getSDLEvs =
   do h <- pollEvent
      case h of
        NoEvent -> return []
+       KeyDown k -> error "Quit"
        Quit -> error "Quit!"
        _ -> do  t <- getSDLEvs
                 return (h:t)
