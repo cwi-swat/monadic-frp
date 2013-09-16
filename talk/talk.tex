@@ -9,6 +9,8 @@
 \usepackage[normalem]{ulem}
 \usepackage{color, colortbl}
 \usepackage{tikz}
+\usetikzlibrary{arrows,%
+                shapes,positioning}
 \usetikzlibrary{trees}
 \usetikzlibrary{shapes}
 \definecolor{green}{rgb}{0,1,0}
@@ -28,6 +30,18 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 \newcommand{\dfcode}[1]{\begin{flalign*}\vspace{-0.35cm}#1\vspace{-0.35cm}\end{flalign*}}
 \newcommand{\mul}{\!\times\!}
 % \date{\today}
+
+\newcommand{\frameofframes}{/}
+\newcommand{\setframeofframes}[1]{\renewcommand{\frameofframes}{#1}}
+\makeatletter
+\setbeamertemplate{footline}
+  {%
+   
+\hfill%
+      {\usebeamerfont{frame number}\usebeamercolor[fg]{frame number}\insertframenumber~\frameofframes~\inserttotalframenumber}
+  }
+\makeatother
+
 \begin{document}
 
 % \AtBeginSection[]
@@ -50,138 +64,50 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 \end{frame}
 
 \section{Intro}
-%format =~ = "\approx"
-%format ... = "\dots"
-\begin{frame}{Transformational vs. Reactive}
-\begin{block}{Transformational program}
-|TransformationalProgram =~ Input -> Output|\\
-Examples: \begin{itemize}
-\item Traditional compiler
-\item Compute math expression
-\end{itemize}
-\end{block}
-\begin{block}{Reactive program}
 
-|ReactiveProgram =~ Event -> (Output, ReactiveProgram) |
-Examples: \begin{itemize}
-\item IDE
-\item Spreadsheet
-\item Any program with GUI
-\end{itemize}
-\end{block}
-\end{frame}
+%format Reactg = "\mathit{React}_{\!\mkern+0.4mu\mathit{g}}"
+%format <*> = "\ap"
+%format <<< = "<\!\!\!<\!\!\!<"
+%format >>> = ">\!\!\!>\!\!\!>"
+%format *** = "*\!\!*\!\!*"
+%format -< = "\:-\!\!\!<"
+%format Sigg   = "\mathit{Sig}_{\!\mathit{g}}"
+%format <&&> = "<\!\!\!\$\!\$\!\!\!>"
+%format >>> = ">\!\!\!>\!\!\!>"
+%format *** = "*\!\!*\!\!*"
+%format &&& = "\:\&\!\!\&\!\!\&\:"
+%format ~= = "\approx"
 
-\begin{frame}{* The problem}
-
-
-\begin{block}{What does this do?}
-\tiny
-\begin{verbatim}
-class ANotifier implements
-      MouseListener, TimeListener 
-      extends Notifier{
-
-  boolean first;
-
-  ANotifier(){
-   mouse.registerMouseListener(this);
-   first = true;
-  }
-
-  void mouseClicked(Event e){
-   if(e.but == RIGHT_BNT) {
-     if(first){
-       timer = new Timer(0.2);
-       timer.registerTimeListener(this);
-     } else {
-       timer.stop();
-       notifyListeners();
-     } 
-   }
-
-   void timeElapsed(Event e){
-     first = true;
-   }
-}
-     
-
-\end{verbatim}
-
-\end{block}
-\end{frame}
-
-
-\begin{frame}{* The problem}
-\begin{tabular}{l l}
- \begin{minipage}[t]{0.45\textwidth}
-\begin{block}{What we mean}
-\only<1>{
-\tiny
-\begin{verbatim}
-wait for double right click =
-  wait for right click 
-  if right click within 200 miliseconds 
-  then done
-  else restart
-\end{verbatim}
-}
-\only<2>{
-\tiny
-\begin{code}
-doubler = 
-  do  rightClick
-      r <- rightClick `before` sleep 0.2
-      if r then return () else doubler
-\end{code}
-}
-\end{block}
-\end{minipage}
-
-& 
- \begin{minipage}[t]{0.45\textwidth}
-
-\begin{block}{What we say}
-\tiny
-\begin{verbatim}
-class DblRCNotifier implements
-      MouseListener, TimeListener 
-      extends Notifier{
-
-  boolean first;
-
-  DblRCNotifier(){
-   mouse.registerMouseListener(this);
-   first = true;
-  }
-
-  void mouseClicked(Event e){
-   if(e.but == RIGHT_BNT) {
-     if(first == true){
-       timer = new Timer(0.2);
-       timer.registerTimeListener(this);
-     } else {
-       timer.stop();
-       notifyListeners();
-     } 
-   }
-
-   void timeElapsed(Event e){
-     first = true;
-   }
-}
-     
-
-\end{verbatim}
-
-\end{block}
-\end{minipage}
-\end{tabular}
-\end{frame}
 
 \newcommand{\inlineitem}{%
 {\color{navyblue} \leavevmode\usebeamertemplate{itemize item} }
 }
-\begin{frame}{What is unique about reactive programming?}
+
+\begin{frame}{Transformational vs. Reactive}
+\begin{block}{Transformational program}
+Transforms input into output.\\
+
+Examples:
+\begin{itemize}
+\item Traditional compiler
+\item Long-running scientific computation
+\end{itemize}
+\end{block}
+
+\begin{block}{Reactive program}
+Engages in a dialogue with its environment, responding to events.\\
+
+Examples:
+\begin{itemize}
+\item IDE
+\item Spreadsheet
+\item Anything with a GUI
+\end{itemize}
+\end{block}
+\end{frame}
+
+
+\begin{frame}{Why Functional Reactive Programming?}
 \begin{block}{Reactive programming means...}
 Dealing with external events which may occur in \alert{in any order}.\\
 \vspace{0.2cm}
@@ -192,396 +118,233 @@ Traditional approaches:\\
 \inlineitem & Callbacks (observer pattern) & \only<2->{$\rightarrow$ inversion of control} \\
 \end{tabular}
 \end{block}
-\only<3>{
+\pause
+\pause
+
 \begin{block}{Functional reactive programming}
-Functional ways of programming reactive system, which are \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
+is \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
 \end{block}
-}
+
 
 \end{frame}
     
+\begin{frame}{Functional Reactive Programming basics}
+
+\begin{block}{Behaviors}
+A \alert{behavior} is a value that changes over time.
+Example: The mouse position.
+\end{block}
+
+\begin{block}{Events}
+An \alert{event} (source) is a behavior that occasionally holds a value.\\
+I.e. |Event a ~= Behavior (Maybe a)|\\
+Example: Mouse clicks.
+\end{block}
+\end{frame}
 
 
 
-
-\begin{frame}{What is Monadic FRP?}
-\begin{block}{Monadic FRP is ...}
+\begin{frame}<1>[label=overview]{Talk overview}
 \begin{enumerate}
-\item A novel monadic programmer interface for FRP
-\item A novel evaluation mechanism for FRP
-
-\end{enumerate}
-\end{block}
-\end{frame}
-
-\begin{frame}{* What the hell is a Monad anyway?}
-
+\item A monadic programmer interface for FRP
 \begin{itemize}
-\item Interface for composing ``steps''
-\item ``Programmable semicolon''
-\item Functional design pattern
-\item ``Is a monad'' means implements the monad interface
-\pause
-\item ... just a monoid in the category of endofunctors
+\item Problem
+\item Solution
 \end{itemize}
-
-
-
+\item \only<1>{Evaluation mechanism} \only<2>{\alert{Evaluation mechanism}}
+\begin{itemize}
+\item Problem
+\item Solution
+\end{itemize}
+\end{enumerate}
 \end{frame}
 
-\begin{frame}{* How i learned to stop worrying and accept monads }
-\begin{block}{Formal stuff}
-\begin{code}
-class Monad m where
-  return   :: a -> m a
-  (>>=)  :: m a -> (a -> m b) -> m b
-\end{code}
-\end{block}
-Example: Imperative looking I/O
-\begin{code}
-return  :: a     -> IO a
-(>>=)   :: IO a  -> (a -> IO b) -> IO b
-read    :: IO String
-write   :: String -> IO ()
-\end{code}
-\vspace{-0.8cm}
-\only<1>{
-\begin{code}
-concatInp :: IO ()
-concatInp =  read >>= (\x -> 
-             read >>= (\y ->
-             write (x ++ y)))
-            
-
-\end{code}
-}
-\only<2>{
-\begin{code}
-concatInp :: IO ()
-concatInp =  read >>= \x -> 
-             read >>= \y ->
-             write (x ++ y)
-\end{code}
-}
-\only<3>{
-\begin{code}
-concatInp :: IO ()
-concatInp = do  x <- read  
-                y <- read
-                write (x ++ y)
-\end{code}
-}
-
-\end{frame}
-
-
-\begin{frame}{* How i learned to stop worrying and love monads }
-
-Example: LL parsing 
-\begin{code}
-return     :: a     -> ParserOf a
-(>>=)      :: ParserOf a  -> (a -> ParserOf b) -> ParserOf b
-readInt    :: ParserOf Int
-eat        :: Char -> ParserOf ()
-runParser  :: ParserOf a -> String -> Maybe a
-\end{code}
-\vspace{-0.5cm}
-\begin{code}
-parseTriple :: ParserOf (Int,Int,Int)
-parseTriple = do  eat '(' 
-                  a <- readInt  
-                  eat ','
-                  b <- readInt
-                  eat ','
-                  c <- readInt
-                  eat ')'
-                  return (a,b,c)
-\end{code}
-
-
-\end{frame}
 
 
 
 \section{Programmer interface}
+\newlength{\tmathindenta}
+\setlength{\tmathindenta}{\mathindent}
+\setlength{\mathindent}{0.15cm}
 
-\begin{frame}{Reactive computations}
-
-\begin{block}{Reactive computation}
-A monadic computation which may require the occurrence of external events to continue
-\end{block}
-\vspace{-0.3cm}
+\begin{frame}{Traditional way of composing behavioral phases}
 \begin{code}
-data R ev a =~ Await (ev -> R ev a) | Done a
-
-instance Monad (R ev) where ...
+switcher :: Behavior a -> Event (Behavior a) -> Behavior a
 \end{code}
-\vspace{-0.6cm}
 \pause
+\vspace{-0.5cm}
 \begin{block}{Example}
 \vspace{-0.4cm}
-\begin{code}
-data GUIEv  =  MDown { but :: Int} |  ...
-mouseDown :: R GUIEv Int
-mouseDown = Await ( \x -> case x of  MDown i  -> Done i
-                                     _  -> mouseDown)
+\begin{center}
+\begin{tikzpicture}[node distance=3cm]
+\tikzset{VertexStyle/.style = {shape          = rectangle,
+                                 inner sep      = 2pt,
+                                 outer sep      = 0pt,
+                                 minimum size   = 30 pt}}
+     \node[VertexStyle,fill=green](G){};
+     \node[VertexStyle,fill=orange,right=of G](OR){};
+     \node[VertexStyle,fill=red,right=of OR](R){};   
+     %\draw[EdgeStyle](B) to node[LabelStyle]{1} (D) ;
+     %\tikzset{EdgeStyle/.append style = {bend left}}
+     \draw[thick,->](G) to node[above]{|rightClick|} (OR);
+     \draw[thick,->](OR) to node[above]{|rightClick|} (R);
+     \draw[thick,->,bend left](OR.south) to node[above]{|leftClick|} (G.south);
 
-sameClick :: R GUIEv Bool
-sameClick = do  p1 <- mouseDown
-                p2 <- mouseDown
-                return (p1 == p2)
+  \end{tikzpicture}
+\end{center}
+\vspace{-0.8cm}
+\pause
+
+\begin{code}
+traffic :: Behavior Color
+traffic = 
+  pure green  `switcher`  (rightClick                    <&&> \_ -> 
+  pure orange `switcher`  (tagBool leftClick rightClick  <&&> \r ->
+  if r then traffic else pure red))
+(<&&>) = flip fmap
+tagBool :: Event a -> Event b -> Event Bool
 \end{code}
-\vspace{-0.6cm}
+\setlength{\mathindent}{\tmathindenta}
+\vspace{-0.8cm}
 \end{block}
+\pause
+Question: \alert{Why can't we use |>>=|?}
 \end{frame}
-
-\begin{frame}{Parallel reactive computation composition}
-\begin{block}{Parallel composition operator}
-\begin{code}
-race :: R ev a -> R ev b -> R ev (R ev a, R ev b)
-\end{code}
-Runs both reactive computations in parallel until either
-completes.
-\end{block}
-
-Example: 
-\begin{code}
-before :: R ev a -> R ev b -> R ev Bool
-before a b = do  r <- race a b
-                 case r of
-                   (_, Done b) -> return False
-                   (Done a, _) -> return True
-
-doubler :: R GUIEv ()
-doubler = do  rightClick
-              r <- rightClick `before` sleep 0.2
-              if r then return () else doubler
-\end{code}
-\end{frame}
-%format :|     = ":\!\!|\:"
-\begin{frame}{Signal computations}
+\begin{frame}{Monadic FRP definitions}
+Answer: We cannot use |>>=| because behaviors cannot \alert{end}.
+\vspace{0.3cm}
 \begin{block}{Signal computation}
-A reactive computation that may also \alert{emit} values
+A behavior that may end. \\
+|Sigg| has two type arguments:
 \begin{itemize}
-\item Can \alert{end}
-\item Describes the entire life time of something
-\item Also a monad $\rightarrow$ composing phases
-\item Defined in terms of reactive computations
+\item The type of the values of the behavior.
+\item The type of the value that it returns.
 \end{itemize}
-
+\vspace{-0.5cm}
+\begin{code}
+instance Monad (Sigg b) where ...
+\end{code}
+\vspace{-0.8cm}
 \end{block}
 \pause
-\only<2>{
-Example: Modal dialog that asks the users name
-\begin{enumerate}
-\item Wait for dialog to be needed
-\item Emit first form of the dialog
-\item Emit new forms of the dialog as the user interacts with the dialog
-\item End \& return name of user
-\end{enumerate}
-}
-\only<3>{
-\begin{code} 
-newtype S ev f r = ...
-instance Monad (S ev f) where ...
-waitFor   :: R ev r -> S ev f r
-emit      :: f -> S ev f ()
+\begin{block}{Reactive computation}
+A signal computation that gives no information, except when it ends.
+\end{block}
+\vspace{-0.25cm}
+
+
+\begin{code}
+type Behaviour  a  = Sigg a Void
+type Reactg     a  = Sigg () a
+type Event      a  = Sigg (Maybe a) Void
 \end{code}
-}
+
 \end{frame}
 
-\begin{frame}{Example: Drawing program}
-\centering
-\begin{tabular}{c c}
-\includegraphics[width=0.3\textwidth]{01.png}
-&
-\includegraphics[width=0.3\textwidth]{02.png}
+
+\begin{frame}{Monadic way of composing behavioral phases}
+
+\begin{block}{Example}
+\vspace{-0.4cm}
+\begin{center}
+\begin{tikzpicture}[node distance=3cm]
+\tikzset{VertexStyle/.style = {shape          = rectangle,
+                                 inner sep      = 2pt,
+                                 outer sep      = 0pt,
+                                 minimum size   = 30 pt}}
+     \node[VertexStyle,fill=green](G){};
+     \node[VertexStyle,fill=orange,right=of G](OR){};
+     \node[VertexStyle,fill=red,right=of OR](R){};   
+     %\draw[EdgeStyle](B) to node[LabelStyle]{1} (D) ;
+     %\tikzset{EdgeStyle/.append style = {bend left}}
+     \draw[thick,->](G) to node[above]{|rightClick|} (OR);
+     \draw[thick,->](OR) to node[above]{|rightClick|} (R);
+     \draw[thick,->,bend left](OR.south) to node[above]{|leftClick|} (G.south);
+
+  \end{tikzpicture}
+\end{center}
+\vspace{-0.6cm}
+
+
+\begin{code}
+traffic :: Sigg Color Void
+traffic = 
+  do  always green `until'` rightClick
+      l <- always orange `until'` (rightClick `before` leftClick)
+      if l then traffic else always red
+\end{code}
+\begin{code}
+always  :: a -> Sigg a Void
+until'  :: Sigg a Void -> Reactg b -> Sigg a b
+before  :: Reactg x -> Reactg y -> Reactg Bool
+\end{code}
+\setlength{\mathindent}{\tmathindenta}
+\vspace{-0.8cm}
+\end{block}
+\end{frame}
+
+
+\section{Evaluation mechanism}
+\againframe<2>{overview}
+
+
+\begin{frame}<1>[label=evalmot]{The problem with existing evaluation mechanisms}
+\begin{block}{Other FRP evaluation mechanisms either ...}
+\begin{tabular}{l p{0.5\textwidth} || p{0.35\textwidth}}
+\inlineitem & Re-evaluate whole expression after each event &$\rightarrow$ Inefficient\\
+\inlineitem & Use side-effects to prevent redundant re-evaluations &$\rightarrow$ \only<1>{?}\only<2->{No time-branching}\\
 \end{tabular}
-\pause
-\begin{code}
-type Box = (Rect,Color)
-define        ::          S GUIEv Box Rect
-chooseColor   :: Rect ->  S GUIEv Box Color
-clickOn       :: Rect ->  R GUIEv ()
-box ::  S GUIEv Box ()
-box = do  r <- define
-          chooseColor r
-          waitFor (clickOn r)
-\end{code}
-\end{frame}
-
-
-\begin{frame}{Another Signal computations example}
-\begin{code} 
-newtype S ev f r = ...
-instance Monad (S ev f) where ...
-waitFor   :: R ev r -> S ev f r
-emit      :: f -> S ev f ()
-\end{code}
-
-Example: Cycle trough colors until right click 
-\begin{code}
-cycleColor :: S GUIEv Color Int
-cycleColor = cc colors 0 where
-   cc (h : t) i = 
-     do  emit h
-         r <- waitFor (middleClick `before` rightClick)
-         if r then cc t (i + 1) else return i
-\end{code}
-
-\end{frame}
-
-\begin{frame}{Dynamic lists}
-\begin{tabular}{c c}
-   \includegraphics[width=0.3\textwidth]{05.png} &
- \begin{minipage}[b]{0.5\textwidth}
-\begin{code}
-box   :: S GUIEv Box ()
-
-boxes :: S GUIEv [Box] ()
-boxes = rList box
-
-rList :: S ev f () -> S ev [f] ()
-
-\end{code}
-\end{minipage}
-\end{tabular}
-
-
-
-
-
-\begin{itemize}
-\item Start a new |box| computation, and when it starts, add it to the list and repeat
-\item If a |box| computation ends remove it from the list
-\item If a |box| computation emits a new value update its value in the list
-\end{itemize}
-\end{frame}
-
-\begin{frame}{Programmer interface summary}
-\begin{block}{Reactive computations}
-A monadic computation which may require the occurrence of external events to continue
-\begin{code}
-data R ev a =~ Await (ev -> R ev a) | Done a
-instance Monad (R ev) where ...
-race :: R ev a -> R ev b -> R ev (R ev a, R ev b)
-\end{code}
-\end{block}
-\begin{block}{Signal computations}
-A reactive computation that may also emit values
-\begin{code}
-newtype S ev f r = ...
-instance Monad (S ev f) where ...
-waitFor   :: R ev r -> S ev f r
-emit      :: f -> S ev f ()
-\end{code}
-\end{block}
-\end{frame}
-
-\section{Programmer interface comparison}
-%format <<< = "<\!\!\!<\!\!\!<"
-%format >>> = ">\!\!\!>\!\!\!>"
-%format *** = "*\!\!*\!\!*"
-%format -< = "\:-\!\!\!<"
-\begin{frame}{Comparison with Arrowized FRP}
-Monadic FRP:
-\begin{code}
-cycleColor :: S GUIEv Color Int
-cycleColor = cc colors 0 where
-  cc (h:t) i = do
-    emit h
-    r <- waitFor (middleClick `before` rightClick)
-    if r then cc t (i+1) else return i
-\end{code}
-Arrowized FRP:
-\begin{code}
-cycleColor :: SF MouseDown (Color, Event Int)
-cycleColor = cc colors 0 where
-  cc (h : t) i = switch ( proc md -> do
-      mc  <- notYet <<< middleClick  -< md
-      rc  <- rightClick              -< md
-      returnA -< ((h,tag rc i), mc)
-    ) (\ _ -> cc t (i+1))
-\end{code}
-
-\end{frame}
-
-\begin{frame}{Comparison with Arrowized FRP}
-Monadic FRP:
-\begin{code}
-boxes :: S GUIEv [Box] ()
-boxes = rList box
-\end{code}
-Arrowized FRP:
-\begin{code}
-type BoxSF  = SF GUIIn (Box,Event ())
-
-boxes :: SF GUIIn [Box]
-boxes = boxes' [] >>> arr (map fst) where
-  boxes' i = pSwitchList i
-    (newBox *** arr toEv >>> arr choose >>> notYet)
-    (\e l -> boxes' (mutateList e l))
-choose (a,b) = merge (fmap Left a) (fmap Right b)
-toEv l =  let l' = map (isNoEvent . snd) l 
-          in if and l' then NoEvent else Event l'
-mutate l (Left b)   = b : l
-mutate l (Right l') = map fst (filter snd (zip l l'))
-\end{code}
-\end{frame}
-
-\begin{frame}{Advantages \& disadvantages of Monadic FRP API}
-\begin{block}{Advantages}
-\begin{itemize}
-\item Implicit routing
-\item Sequencing phases is easier \& more intuitive
-\item Easier dynamic lists 
-\end{itemize}
-\end{block}
-\begin{block}{Disadvantages}
-\begin{itemize}
-\item Currently no reactive-level recursion
-\item Explicit memoization needed for reactive-level sharing
-\end{itemize}
-\end{block}
-\end{frame}
-
-\section{Evaluation model}
-\begin{frame}{Evaluation model: context}
-\begin{block}{Other FRP evaluation models either ...}
-\begin{itemize}
-\item Re-evaluate the whole expression after each event
-\item Use side-effects to prevent redundant re-evaluations
-\end{itemize}
 \end{block}
 \pause
+\pause
+
 \begin{block}{Monadic FRP ...}
-has the first \emph{purely functional} evaluation model that prevents redundant re-evaluations
+has the first \emph{purely functional} evaluation mechanism that prevents redundant re-evaluations
 \end{block}
+
 \end{frame}
 
-\begin{frame}{Idea}
-We do not know if an event will have any effect on a reactive computation:
-\begin{code}
-data R ev a  =~  Await (ev -> R ev a) 
-             |   Done a
-\end{code}
+\begin{frame}{Time-branching}
+Suppose that drawings in a drawing program are signal computations:
+\vspace{-0.5cm}
+\begin{center}
+\includegraphics[scale=0.3]{drawing.pdf}\\
+\end{center}
+Time-branching: ``Freeze'' a running signal computation.\\
+
+Example usages:
+\begin{itemize}
+\item Duplicate drawing in drawing program into two tabs
+\item Undo
+\item What-if?
+\end{itemize}
+
 \pause
-Communicate which events a reactive computation is interested in:
-\begin{code}
-data R ev a  =~  Await (Requests ev) (ev -> R ev a) 
-             |   Done a
-\end{code}
-No re-evaluation: Only call a continuation if the reactive computation is interested in the occurred event
+\alert{Impossible} with impure evaluation mechanism
+
 
 \end{frame}
+\againframe<2-3>{evalmot}
 
-\begin{frame}{Effects on basic combinators}
+\begin{frame}{Basic building blocks of Monadic FRP}
+Reminder:
+\begin{block}{Reactive computation}
+A signal computation that gives no information, except when it ends.\\
+\begin{code}
+type Reactg     a  = Sigg () a
+\end{code}
+\end{block}
 
 \begin{itemize}
-\item |a >>= b| requests the same events as |a|
-\item |race a b| requests the union of the requests of |a| and |b| 
+\item Actually: signal computations are defined in terms of reactive computations.
+\item All Monadic FRP expression are built using:
+  \begin{itemize}
+    \item Sequential composition: |>>=|
+\item Parallel composition:  |first|
 \end{itemize}
-All other (Signal computation) combinators are expressed in terms of |>>=| and |race|
+\end{itemize}
+
+
 
 \end{frame}
 
@@ -595,9 +358,9 @@ All other (Signal computation) combinators are expressed in terms of |>>=| and |
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {|race|}
+\node[bag, name=root] {|first|}
   [sibling distance=4.5cm]
-  child {node[bag] {|race|}[sibling distance=2cm]
+  child {node[bag] {|first|}[sibling distance=2cm]
     child {node[bag] {|mouseMove|}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -610,24 +373,25 @@ All other (Signal computation) combinators are expressed in terms of |>>=| and |
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
        %node[left]{$\{\mathit{MouseMove},$ \\ $\mathit{MouseUp}\}$}
   }
-   child {node[bag] {|>>|}  [sibling distance=2.4cm]
-child {node[bag] {|mouseDown|}
+  child {node[bag] {|>> deltaTime|} 
+      child {node[bag] {|mouseDown|}
        edge from parent[<-]
        node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
-    }
-    child {node[bag] {|deltaTime|}
-       edge from parent[-]
-    }
+     }
        edge from parent[<-]
        node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
   }
+
+    
+
+
  
  ;
 \node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
 \draw [->] (root) --  (inter) node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$};
 \end{tikzpicture} 
 \begin{code}
-race (race mouseMove mouseUp) (mouseDown >> deltaTime) 
+first (first mouseMove mouseUp) (mouseDown >> deltaTime) 
 \end{code}
 \end{frame}
 
@@ -637,9 +401,9 @@ race (race mouseMove mouseUp) (mouseDown >> deltaTime)
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {|race|}
+\node[bag, name=root] {|first|}
   [sibling distance=4.5cm]
-  child {node[bag] {|race|}[sibling distance=2cm]
+  child {node[bag] {|first|}[sibling distance=2cm]
     child {node[bag] {|mouseMove|}
        edge from parent[-,dashed]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -652,13 +416,10 @@ race (race mouseMove mouseUp) (mouseDown >> deltaTime)
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
        %node[left]{$\{\mathit{MouseMove},$ \\ $\mathit{MouseUp}\}$}
   }
-   child {node[bag] {|>>|}  [sibling distance=2.4cm]
+   child {node[bag] {|>> deltaTime|}  [sibling distance=2.4cm]
 child {node[bag] {|mouseDown|}
        edge from parent[->,very thick]
        node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
-    }
-    child {node[bag] {|deltaTime|}
-       edge from parent[-,dashed,thin]
     }
        edge from parent[->,very thick]
        node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
@@ -670,7 +431,7 @@ child {node[bag] {|mouseDown|}
 
 \end{tikzpicture} 
 \begin{code}
-race (race mouseMove mouseUp) (mouseDown >> deltaTime) 
+first (first mouseMove mouseUp) (mouseDown >> deltaTime) 
 \end{code}
 \end{frame}
 
@@ -679,9 +440,9 @@ race (race mouseMove mouseUp) (mouseDown >> deltaTime)
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {|race|}
+\node[bag, name=root] {|first|}
   [sibling distance=4.5cm]
-  child {node[bag] {|race|}[sibling distance=2cm]
+  child {node[bag] {|first|}[sibling distance=2cm]
     child {node[bag] {|mouseMove|}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -704,51 +465,29 @@ race (race mouseMove mouseUp) (mouseDown >> deltaTime)
 \draw [->] (root) --  (inter) node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{DeltaTime}\}$};
 \end{tikzpicture} 
 \begin{code}
-race (race mouseMove mouseUp) deltaTime
+first (first mouseMove mouseUp) deltaTime
 \end{code}
 \end{frame}
 
-\begin{frame}{Why purely functional FRP evaluation matters}
 
-Purely functional FRP evaluation $\rightarrow$ Reactive level immutability
 
+
+\section{Conclusion}
+
+\begin{frame}{In the paper...}
 \begin{itemize}
-\item Can see different ``Futures'' \\ Examples:
-\begin{itemize}
-\item Duplicate drawing in drawing program into two tabs
-\item Undo
-\item What-if?
-\end{itemize}
-
-\item Impossible with impure evaluation model
+\item Full simple drawing program example.
+\item Signal computations can end $\rightarrow$ easier dynamic lists.
+\item Usage \& definition of various useful combinators.
+\item ... and all the details.
 \end{itemize}
 
 \end{frame}
-\section{Summary}
 
 \begin{frame}{Monadic FRP: Conclusion}
 \begin{itemize}
-\item Programmer interface
-\begin{itemize}
-\item Basic concepts: Reactive \& Signal computations
-\item Advantages: \begin{itemize}
-\item Implicit routing
-\item Sequencing phases is easier \& more intuitive.
-\item Easier dynamic lists 
-\end{itemize}
-\end{itemize}
-
-\item Evaluation model
-\begin{itemize} 
-\item First purely functional FRP evaluation model that avoids hat prevents redundant re-evaluations.
-\item Purely functional FRP evaluation $\rightarrow$ Reactive level immutability
-\end{itemize}
-
-\item Future work
-\begin{itemize} 
-\item Implicit reactive level sharing
-\item Reactive level recursion
-\end{itemize}
+\item Monadic interface makes sequencing behavioral phases easier.
+\item Evaluation model is efficient while still allowing time-branching.
 \end{itemize}
 \pause
 Questions?
