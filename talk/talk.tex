@@ -11,8 +11,8 @@
 \usepackage{tikz}
 \usetikzlibrary{trees}
 \usetikzlibrary{shapes}
-
 \definecolor{green}{rgb}{0,1,0}
+\definecolor{navyblue}{rgb}{0.2,0.2,0.7}
 \usetheme{Antibes}
 \useoutertheme[subsection=false]{miniframes}
 \usenavigationsymbolstemplate{}
@@ -48,41 +48,260 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 \vspace{-0.5cm}
   \titlepage
 \end{frame}
+
 \section{Intro}
 %format =~ = "\approx"
 %format ... = "\dots"
-\begin{frame}{What is FRP?}
-\begin{block}{Transformational vs. Reactive}
-\begin{itemize}
-\item |TransformationalProgram =~ Input -> Output|\\
+\begin{frame}{Transformational vs. Reactive}
+\begin{block}{Transformational program}
+|TransformationalProgram =~ Input -> Output|\\
 Examples: \begin{itemize}
 \item Traditional compiler
 \item Compute math expression
 \end{itemize}
+\end{block}
+\begin{block}{Reactive program}
 
-\item |ReactiveProgram =~ Event -> (Output, ReactiveProgram) |
+|ReactiveProgram =~ Event -> (Output, ReactiveProgram) |
 Examples: \begin{itemize}
 \item IDE
 \item Spreadsheet
 \item Any program with GUI
 \end{itemize}
-\end{itemize}
-\end{block}
-\pause
-\begin{block}{Functional Reactive Programming (FRP)}
-Umbrella term for ways to describe and composing reactive components in functional style.
 \end{block}
 \end{frame}
+
+\begin{frame}{* The problem}
+
+
+\begin{block}{What does this do?}
+\tiny
+\begin{verbatim}
+class ANotifier implements
+      MouseListener, TimeListener 
+      extends Notifier{
+
+  boolean first;
+
+  ANotifier(){
+   mouse.registerMouseListener(this);
+   first = true;
+  }
+
+  void mouseClicked(Event e){
+   if(e.but == RIGHT_BNT) {
+     if(first){
+       timer = new Timer(0.2);
+       timer.registerTimeListener(this);
+     } else {
+       timer.stop();
+       notifyListeners();
+     } 
+   }
+
+   void timeElapsed(Event e){
+     first = true;
+   }
+}
+     
+
+\end{verbatim}
+
+\end{block}
+\end{frame}
+
+
+\begin{frame}{* The problem}
+\begin{tabular}{l l}
+ \begin{minipage}[t]{0.45\textwidth}
+\begin{block}{What we mean}
+\only<1>{
+\tiny
+\begin{verbatim}
+wait for double right click =
+  wait for right click 
+  if right click within 200 miliseconds 
+  then done
+  else restart
+\end{verbatim}
+}
+\only<2>{
+\tiny
+\begin{code}
+doubler = 
+  do  rightClick
+      r <- rightClick `before` sleep 0.2
+      if r then return () else doubler
+\end{code}
+}
+\end{block}
+\end{minipage}
+
+& 
+ \begin{minipage}[t]{0.45\textwidth}
+
+\begin{block}{What we say}
+\tiny
+\begin{verbatim}
+class DblRCNotifier implements
+      MouseListener, TimeListener 
+      extends Notifier{
+
+  boolean first;
+
+  DblRCNotifier(){
+   mouse.registerMouseListener(this);
+   first = true;
+  }
+
+  void mouseClicked(Event e){
+   if(e.but == RIGHT_BNT) {
+     if(first == true){
+       timer = new Timer(0.2);
+       timer.registerTimeListener(this);
+     } else {
+       timer.stop();
+       notifyListeners();
+     } 
+   }
+
+   void timeElapsed(Event e){
+     first = true;
+   }
+}
+     
+
+\end{verbatim}
+
+\end{block}
+\end{minipage}
+\end{tabular}
+\end{frame}
+
+\newcommand{\inlineitem}{%
+{\color{navyblue} \leavevmode\usebeamertemplate{itemize item} }
+}
+\begin{frame}{What is unique about reactive programming?}
+\begin{block}{Reactive programming means...}
+Dealing with external events which may occur in \alert{in any order}.\\
+\vspace{0.2cm}
+Traditional approaches:\\
+\begin{tabular}{l l l}
+\inlineitem & Concurrency &\only<2->{$\rightarrow$ non-determinism}\\
+\inlineitem & Blocking I/O multiplexing &\only<2->{$\rightarrow$ non-composable}\\
+\inlineitem & Callbacks (observer pattern) & \only<2->{$\rightarrow$ inversion of control} \\
+\end{tabular}
+\end{block}
+\only<3>{
+\begin{block}{Functional reactive programming}
+Functional ways of programming reactive system, which are \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
+\end{block}
+}
+
+\end{frame}
+    
+
+
+
 
 \begin{frame}{What is Monadic FRP?}
 \begin{block}{Monadic FRP is ...}
 \begin{enumerate}
-\item A novel Monadic programmer interface for FRP
+\item A novel monadic programmer interface for FRP
 \item A novel evaluation mechanism for FRP
 
 \end{enumerate}
 \end{block}
 \end{frame}
+
+\begin{frame}{* What the hell is a Monad anyway?}
+
+\begin{itemize}
+\item Interface for composing ``steps''
+\item ``Programmable semicolon''
+\item Functional design pattern
+\item ``Is a monad'' means implements the monad interface
+\pause
+\item ... just a monoid in the category of endofunctors
+\end{itemize}
+
+
+
+\end{frame}
+
+\begin{frame}{* How i learned to stop worrying and accept monads }
+\begin{block}{Formal stuff}
+\begin{code}
+class Monad m where
+  return   :: a -> m a
+  (>>=)  :: m a -> (a -> m b) -> m b
+\end{code}
+\end{block}
+Example: Imperative looking I/O
+\begin{code}
+return  :: a     -> IO a
+(>>=)   :: IO a  -> (a -> IO b) -> IO b
+read    :: IO String
+write   :: String -> IO ()
+\end{code}
+\vspace{-0.8cm}
+\only<1>{
+\begin{code}
+concatInp :: IO ()
+concatInp =  read >>= (\x -> 
+             read >>= (\y ->
+             write (x ++ y)))
+            
+
+\end{code}
+}
+\only<2>{
+\begin{code}
+concatInp :: IO ()
+concatInp =  read >>= \x -> 
+             read >>= \y ->
+             write (x ++ y)
+\end{code}
+}
+\only<3>{
+\begin{code}
+concatInp :: IO ()
+concatInp = do  x <- read  
+                y <- read
+                write (x ++ y)
+\end{code}
+}
+
+\end{frame}
+
+
+\begin{frame}{* How i learned to stop worrying and love monads }
+
+Example: LL parsing 
+\begin{code}
+return     :: a     -> ParserOf a
+(>>=)      :: ParserOf a  -> (a -> ParserOf b) -> ParserOf b
+readInt    :: ParserOf Int
+eat        :: Char -> ParserOf ()
+runParser  :: ParserOf a -> String -> Maybe a
+\end{code}
+\vspace{-0.5cm}
+\begin{code}
+parseTriple :: ParserOf (Int,Int,Int)
+parseTriple = do  eat '(' 
+                  a <- readInt  
+                  eat ','
+                  b <- readInt
+                  eat ','
+                  c <- readInt
+                  eat ')'
+                  return (a,b,c)
+\end{code}
+
+
+\end{frame}
+
+
 
 \section{Programmer interface}
 
@@ -128,9 +347,10 @@ completes.
 Example: 
 \begin{code}
 before :: R ev a -> R ev b -> R ev Bool
-before a b = fmap cmp (race a b) 
-  where  cmp (_, Done b) = False
-         cmp (Done a, _) = True
+before a b = do  r <- race a b
+                 case r of
+                   (_, Done b) -> return False
+                   (Done a, _) -> return True
 
 doubler :: R GUIEv ()
 doubler = do  rightClick
@@ -313,7 +533,7 @@ mutate l (Right l') = map fst (filter snd (zip l l'))
 \begin{block}{Advantages}
 \begin{itemize}
 \item Implicit routing
-\item Sequencing phases is easier \& more intuitive.
+\item Sequencing phases is easier \& more intuitive
 \item Easier dynamic lists 
 \end{itemize}
 \end{block}
