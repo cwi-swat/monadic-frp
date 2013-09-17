@@ -5,6 +5,7 @@ import Data.Set hiding (map,filter,foldl)
 import qualified Data.Set as Set
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl)
 import Data.Maybe
+import Control.Monad
 import qualified Memo as Memo
 
 
@@ -97,6 +98,9 @@ instance  Ord a => Eq (Event a) where
 -- below: Section 4
 
 -- Sequential composition
+
+instance Functor (Sig e a) where
+  fmap = liftM
 
 instance Monad (Sig e a) where
   return a = emitAll (End a)

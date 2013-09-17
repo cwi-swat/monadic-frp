@@ -130,14 +130,16 @@ is \alert{deterministic}, \alert{composable} and \alert{without inversion of con
     
 \begin{frame}{Functional Reactive Programming basics}
 
+
 \begin{block}{Signal}
-A \alert{Signal} is a value that changes over time.
+A \alert{behavior} is a value that changes over time.
 Example: The mouse position.
 \end{block}
 
-\begin{block}{Events}
-An \alert{event} (source) is a signal that occasionally holds a value.\\
-I.e. |Event a ~= Signal (Maybe a)|\\
+\begin{block}{Event}
+An \alert{event} (source) is a behavior that occasionally holds a value.\\
+I.e. |Event a ~= Behavior (Maybe a)|\\
+
 Example: Mouse clicks.
 \end{block}
 \end{frame}
@@ -169,7 +171,11 @@ Example: Mouse clicks.
 
 \begin{frame}{Traditional way of composing behavioral phases}
 \begin{code}
+<<<<<<< HEAD
 switcher :: Signal a -> Event (Signal a) -> Signal a
+=======
+switcher :: Behavior a -> Event (Behavior a) -> Behavior a
+>>>>>>> 8f280c0045202e67204f59568cbe1d603556bb01
 \end{code}
 \pause
 \vspace{-0.5cm}
@@ -203,6 +209,7 @@ traffic =
   `switch`  \r ->  if r then traffic else constant red 
 
 tagBool :: SF a (Event x) -> SF a (Event y) -> SF a (Event Bool)
+
 \end{code}
 \setlength{\mathindent}{\tmathindenta}
 \vspace{-0.8cm}
@@ -274,9 +281,14 @@ traffic =
       if l then traffic else always red
 \end{code}
 \begin{code}
+<<<<<<< HEAD
 always  :: a -> Sig e a Void
 until'  :: Sig a Void -> React e b -> Sig e a b
 before  :: React e x -> React e y -> React e Bool
+=======
+always  :: a -> Sigg a Void
+until'  :: Sigg a Void -> Reactg b -> Sigg a b
+before  :: Reactg x -> Reactg y -> Reactg Bool
 \end{code}
 \setlength{\mathindent}{\tmathindenta}
 \vspace{-0.8cm}

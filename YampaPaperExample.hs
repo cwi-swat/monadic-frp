@@ -3,6 +3,7 @@
 module Main where
 
 import YampaSDL
+import FRP.Yampa.Utilities
 import qualified Data.Set as Set
 import Data.Maybe
 
@@ -15,7 +16,7 @@ import Debug.Trace
 
 
 clickOn :: MouseBtn -> SF MouseDown (Event ())
-clickOn b = arr (\e -> fmap (const ()) $ filterE (\x -> (trace $ "hallo" ++ (show b)) $ b `Set.member` x) e )
+clickOn b = arr $ \e -> fmap (const ()) $ filterE (\x -> b `Set.member` x) e 
 
 sameClick :: SF MouseDown (Event ())
 sameClick = accumFilter isSame Nothing where
@@ -41,6 +42,27 @@ addNeverL :: SF a b -> SF a (Event c, b)
 addNeverL x = x >>> arr (NoEvent,)
 
 
+green = head colors
+red = green
+orange = green
+
+
+
+traffic2 = pure green `switcher` setNext phOrange rightClick
+  phOrang = pure orange `switcher` merge (setNext phRed rightClick) (setNext traffic2 leftClick)
+  phRed   = pure red
+  setNext m = fmap (const m)
+
+traffic :: SF MouseDown Color
+traffic = switch (constant green &&& notYet <<< rightClick) $ \_ ->  
+          switch (constant orange &&& leftClick `tagBool` rightClick)
+          $ \r ->  if r
+                   then constant red
+                   else traffic
+  where tagBool :: SF a (Event x) -> SF a (Event y) -> SF a (Event Bool)
+        tagBool x y = arr2 lMerge <<< tag' True x &&& tag' False y
+        tag' t a = arr (`tag` t) <<< a
+
 doublerr = constant NoEvent where
  bla = 
   dSwitch (addNeverL (rightClick)) 
@@ -57,8 +79,37 @@ doublerr = constant NoEvent where
 --type MouseDown = Event (Set.Set MouseBtn)
 --type MouseUp = Event (Set.Set MouseBtn)
 
+countSig :: SF (Event a) Int
+countSig = hold 0 <<< count
+
+advList :: [a] -> SF (Event x) a
+advList (h : t) =  
+  identity &&& arr (\x -> tag x (advList t)) 
+  >>> rSwitch (constant h)
+
+cycleColor2 :: SF MouseDown (Color, Event Int)
+cycleColor2 = proc md -> do
+   mc <- middleClick     -< md 
+   rc <- rightClick      -< md   
+   c  <- advList colors  -< mc
+   n  <- countSig        -< mc
+   e  <- arr2 tag        -< (rc,n)
+   returnA -< (c,e) 
+     
+{-
+ding :: SF (Event Int) Int
+ding = damin 0 0 where
+  damin  mi mx  = switch (add mi)         (\i -> damax  (min mi i) (max mx i))
+  damax  mi mx  = switch (add mx)         (\i -> daplus (min mi i) (max mx i))
+  daplus mi mx  = switch (add $ mi + mx)  (\i -> damin  (min mi i) (max mx i)) 
+  where add h = constant h &&& identity
+-}
+
+   
+   
+
 cycleColor :: SF MouseDown (Color, Event Int)
-cycleColor = cc colors 1 where
+cycleColor = cc colors 0 where
   cc (h : t) i = 
     switch ( proc md -> do
          mc  <- notYet <<< middleClick  -< md
