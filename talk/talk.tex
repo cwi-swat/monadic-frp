@@ -88,11 +88,36 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 {\color{navyblue} \leavevmode\usebeamertemplate{itemize item} }
 }
 
+\begin{frame}{What is Functional Reactive Programming (FRP)?}
+\begin{block}{Reactive program}
+Engages in a dialogue with its environment, responding to events.\\
+
+Examples: IDE, Spreadsheet, Anything with a GUI
+\end{block}
+\begin{block}{Reactive programming means...}
+Dealing with external events which may occur in \alert{in any order}.\\
+\vspace{0.2cm}
+Traditional approaches:\\
+\begin{tabular}{l l l l}
+  & \emph{Approach} & \emph{Downside}\\
+\hline
+\inlineitem & Concurrency & non-determinism\\
+\inlineitem & Callbacks (observer pattern) & inversion of control \\
+\inlineitem & I/O multiplexing & non-composable\\
+\end{tabular}
+\end{block}
+
+\begin{block}{Functional reactive programming}
+Functional ways of reactive programming, which are \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
+\end{block}
 
 
-\section{Problem}
+\end{frame}
 
-\begin{frame}{Two schools of Functional Reactive Programming (FRP)}
+
+
+
+\begin{frame}{Two schools of Functional Reactive Programming}
 
 \begin{block}{Single future}
 Examples: Fran, Reactive, FrTime, Scala.React \\
@@ -131,7 +156,7 @@ Example usages:
 
 
 \end{frame}
-
+\section{Problem}
 \begin{frame}{Efficiency considerations}
 We do not want:
 
@@ -154,6 +179,7 @@ FrTime, Scala.React & Self-adjusting computation \\
 Both efficient: prevent polling \& redundant re-evaluations
 \end{frame}
 
+
 \begin{frame}{Time branching evaluation mechanisms}
 \begin{tabular}{l l}
  & \emph{Evaluation mechanism}  \\
@@ -174,7 +200,7 @@ Not as efficient as single future mechanisms:
 We introduce Monadic Functional Reactive Programming.
 \begin{itemize}
 \item A new programming interface for time-branching  FRP
-\item \emph{This talk:} Efficient evaluation mechanism for time-branching FRP: \\
+\item \alert{This talk:} Efficient evaluation mechanism for time-branching FRP: \\
  Continuation based + event requests\\
 Prevents:
 \begin{itemize}
@@ -290,7 +316,7 @@ Handle event requests in some Monad (for example IO):
 \begin{code}
 interpret ::  Monad m => (Requests e -> m e) 
               -> React e a -> m a
-interpret p (Now a)     = return a
+interpret p (Now a)      = return a
 interpret p (Later r c)  = p r >>= interpret p . c
 \end{code}
 \end{block}
@@ -359,17 +385,17 @@ first (first mouseMove mouseUp) (mouseDown >> deltaTime)
 The reactive computation requests an events from the set:
 $$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$$
 
-This is passed to the function |p|, which handles event requests.
+This set is passed to the function |p|, which handles event requests. |p| can \alert{block} until such an event arrives.
 
 
 \begin{code}
 interpret ::  Monad m => (Requests e -> m e) 
               -> React e a -> m a
-interpret p (Now a)     = return a
+interpret p (Now a)      = return a
 interpret p (Later r c)  = p r >>= interpret p . c
 \end{code}
 
-This function can \alert{block} until such an event arrives.
+
 
 \end{frame}
 
@@ -465,6 +491,8 @@ Event requests $\rightarrow$
 
 \end{frame}
 
+\section{Conclusion}
+
 \begin{frame}{In the paper...}
 \begin{itemize}
 \item Monadic FRP programming interface.
@@ -477,7 +505,7 @@ Event requests $\rightarrow$
 
 \end{frame}
 
-\section{Conclusion}
+
 \begin{frame}{Future work}
 Implementation of evaluation mechanism currently relies on \emph{closed} union of possible basic events.\\
 Downsides:
@@ -513,50 +541,9 @@ Questions?
 \end{frame}
 
 
-\begin{frame}[noframenumbering]{Transformational vs. Reactive}
-\begin{block}{Transformational program}
-Transforms input into output.\\
-
-Examples:
-\begin{itemize}
-\item Traditional compiler
-\item Long-running scientific computation
-\end{itemize}
-\end{block}
-
-\begin{block}{Reactive program}
-Engages in a dialogue with its environment, responding to events.\\
-
-Examples:
-\begin{itemize}
-\item IDE
-\item Spreadsheet
-\item Anything with a GUI
-\end{itemize}
-\end{block}
-\end{frame}
 
 
-\begin{frame}[noframenumbering]{Why Functional Reactive Programming?}
-\begin{block}{Reactive programming means...}
-Dealing with external events which may occur in \alert{in any order}.\\
-\vspace{0.2cm}
-Traditional approaches:\\
-\begin{tabular}{l l l l}
-  & \emph{Approach} & \emph{Downside}\\
-\hline
-\inlineitem & Concurrency & non-determinism\\
-\inlineitem & Callbacks (observer pattern) & inversion of control \\
-\inlineitem & I/O multiplexing & non-composable\\
-\end{tabular}
-\end{block}
 
-\begin{block}{Functional reactive programming}
-is \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
-\end{block}
-
-
-\end{frame}
 
 
 \end{document}
