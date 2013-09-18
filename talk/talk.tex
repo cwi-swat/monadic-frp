@@ -31,6 +31,11 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 \newcommand{\mul}{\!\times\!}
 % \date{\today}
 
+\newcommand{\beginbackup}{
+   \newcounter{framenumbervorappendix}
+   \setcounter{framenumbervorappendix}{\value{framenumber}}
+}
+
 \newcommand{\frameofframes}{/}
 \newcommand{\setframeofframes}[1]{\renewcommand{\frameofframes}{#1}}
 \makeatletter
@@ -83,77 +88,36 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 {\color{navyblue} \leavevmode\usebeamertemplate{itemize item} }
 }
 
-\begin{frame}{Transformational vs. Reactive}
-\begin{block}{Transformational program}
-Transforms input into output.\\
 
-Examples:
-\begin{itemize}
-\item Traditional compiler
-\item Long-running scientific computation
-\end{itemize}
-\end{block}
-
-\begin{block}{Reactive program}
-Engages in a dialogue with its environment, responding to events.\\
-
-Examples:
-\begin{itemize}
-\item IDE
-\item Spreadsheet
-\item Anything with a GUI
-\end{itemize}
-\end{block}
-\end{frame}
-
-
-\begin{frame}{Why Functional Reactive Programming?}
-\begin{block}{Reactive programming means...}
-Dealing with external events which may occur in \alert{in any order}.\\
-\vspace{0.2cm}
-Traditional approaches:\\
-\begin{tabular}{l l l l}
-  & \emph{Approach} & \emph{Downside}\\
-\hline
-\inlineitem & Concurrency & non-determinism\\
-\inlineitem & Callbacks (observer pattern) & inversion of control \\
-\inlineitem & I/O multiplexing & non-composable\\
-\end{tabular}
-\end{block}
-
-\begin{block}{Functional reactive programming}
-is \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
-\end{block}
-
-
-\end{frame}
-
-\begin{frame}{What is Monadic FRP?}
-
-\begin{enumerate}
-\item Alternative programmer interface for FRP
-\item \emph{This talk:} an efficient evaluation mechanism.
-\end{enumerate}
-\end{frame}
 
 \section{Problem}
 
 \begin{frame}{Two schools of FRP}
+
+\begin{block}{Single future}
+Examples: Fran, Reactive, FrTime, Scala.React \\
+\vspace{-0.3cm}
 \begin{center}
-\begin{tabular}{l || l}
-& \emph{Examples}\\
-\hline
-Single future  & Fran, Reactive, FrTime, Scala.React  \\[0.3cm]
-Time branching & Yampa, Monadic FRP \\
-\end{tabular}
+\includegraphics[scale=0.25]{free-will.jpg}
 \end{center}
+\vspace{-0.5cm}
+\end{block}
+\begin{block}{Time branching}
+Example: Yampa
+\vspace{-0.3cm}
+\begin{center}
+\includegraphics[scale=0.15]{many-worlds.png}
+\end{center}
+\vspace{-0.2cm}
+\end{block}
+
 \end{frame}
 
 
 \begin{frame}{Time branching}
 \vspace{-0.2cm}
 \begin{center}
-\includegraphics[scale=0.3]{drawing.pdf}\\
+\includegraphics[scale=0.4]{drawing.pdf}\\
 \end{center}
 \vspace{-0.2cm}
 \noindent``Freeze'' a running FRP expression, convert it to a value.\\
@@ -165,19 +129,15 @@ Example usages:
 \item What-if?
 \end{itemize}
 
-Other names:
-\begin{itemize}
-\item Reactive level immutability
-\item Shallow causality
-\end{itemize}
 
 \end{frame}
 
 \begin{frame}{Efficiency considerations}
 We do not want:
+
 \begin{itemize}
-\item Polling
-\item Redundant re-evaluations
+\item Polling \hfill\includegraphics[scale=0.3]{are-we-there-yet.jpg}
+\item Redundant re-evaluations\hfill\includegraphics[scale=0.3]{recompute.png}
 \end{itemize}
 
 \end{frame}
@@ -185,20 +145,20 @@ We do not want:
 \begin{frame}{Single future evaluation mechanisms}
 
 \begin{tabular}{l l}
-\emph{Evaluation mechanism} & \emph{Example} \\
+&\emph{Evaluation mechanism} \\
 \hline
-Push-pull  & Reactive \\
-Self-adjusting computation & FrTime, Scala.React \\
+Reactive & Push-pull \\
+FrTime, Scala.React & Self-adjusting computation \\
 \end{tabular}\\
 \vspace{0.2cm}
 Both efficient: prevent polling \& redundant re-evaluations
 \end{frame}
 
-\begin{frame}{Time branching}
+\begin{frame}{Time branching evaluation mechanisms}
 \begin{tabular}{l l}
-\emph{Evaluation mechanism} & \emph{Example} \\
+ & \emph{Evaluation mechanism}  \\
 \hline
-Continuation based + GADT-based optimizations  & Yampa \\
+Yampa & Continuation based + GADT-based optimizations  \\
 \end{tabular}\\
 \vspace{0.2cm}
 Not as efficient as single future mechanisms: 
@@ -207,22 +167,27 @@ Not as efficient as single future mechanisms:
 \item Prevents a large class, but not all, redundant re-evaluations
 \end{itemize}
 \end{frame}
+\section{Solution}
 
-\begin{frame}{Monadic FRP evaluation mechanism}
-Continuation based + event requests\\
+\begin{frame}{Monadic FRP}
+
+We introduce Monadic Functional Reactive Programming.
+\begin{itemize}
+\item A new programming interface for time-branching  FRP
+\item \emph{This talk:} Efficient evaluation mechanism for time-branching FRP: \\
+ Continuation based + event requests\\
 Prevents:
 \begin{itemize}
 \item Polling
 \item Redundant re-evaluations
 \end{itemize}
-
+\end{itemize}
 \end{frame}
 
 \newlength{\tmathindenta}
 \setlength{\tmathindenta}{\mathindent}
 \setlength{\mathindent}{0.05cm}
 
-\section{Solution}
 
 \begin{frame}{Reactive computations}
 
@@ -306,20 +271,39 @@ traffic =
 \begin{block}{Continuation based evaluation}
 
 \begin{code}
-data React e a = Now a | Later (e -> React e a) 
+data React e a = Done a | Later (e -> React e a) 
 \end{code}
 We do not know if an event will have any effect.
 \end{block}
 
 \begin{block}{Continuation based + requests}
 \begin{code}
-data React e a = Now a | Later (Requests e) (e -> React e a) 
+data React e a = Done a | Later (Requests e) (e -> React e a) 
 \end{code}
 Add which events the reactive computation \alert{requests}\\ (i.e. is interested in).
 \end{block}
 \end{frame}
 
+\begin{frame}{Interpreting Monadic FRP expressions}
+\begin{block}{Interpret Reactive computation}
+Handle event requests in some Monad (for example IO):
+\begin{code}
+interpret ::  Monad m => (Requests e -> m e) 
+              -> React e a -> m a
+interpret p (Now a)     = return a
+interpret p (Later r c)  = p r >>= interpret p . c
+\end{code}
+\end{block}
 
+\begin{block}{Interpret Signal computations}
+Also handle emissions.
+\begin{code}
+interpretSig ::  Monad m  => (Requests e -> m e) 
+                 -> (a -> m ()) -> Sig e a b -> m b
+\end{code}
+\end{block}
+
+\end{frame}
 
 
 
@@ -361,7 +345,7 @@ child {node[bag] {|mouseDown|}
   }
  
  ;
-\node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
+\node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {|interpret|};
 \draw [->] (root) --  (inter) node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$};
 \end{tikzpicture} 
 \begin{code}
@@ -375,9 +359,17 @@ first (first mouseMove mouseUp) (mouseDown >> deltaTime)
 The reactive computation requests an events from the set:
 $$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$$
 
+This is passed to the function |p|, which handles event requests.
 
-So we can \alert{block} until such an event arrives.
 
+\begin{code}
+interpret ::  Monad m => (Requests e -> m e) 
+              -> React e a -> m a
+interpret p (Now a)     = return a
+interpret p (Later r c)  = p r >>= interpret p . c
+\end{code}
+
+This function can \alert{block} until such an event arrives.
 
 \end{frame}
 
@@ -412,7 +404,7 @@ child {node[bag] {|mouseDown|}
   }
  
  ;
-\node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
+\node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {|interpret|};
 \draw [red,<-,thick] (root) --  (inter) node[midway,fill=white,color=white,text=black]{Observed : $\{\mathit{MouseDown}\:\mathit{MLeft}\}$};
 \end{tikzpicture}
 \begin{code}
@@ -454,7 +446,7 @@ edge from parent[white]
   }
  
  ;
-\node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
+\node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {|interpret|};
 \draw [->] (root) --  (inter) node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{DeltaTime}\}$};
 \end{tikzpicture} 
 
@@ -462,6 +454,27 @@ edge from parent[white]
 first (first mouseMove mouseUp) deltaTime
 \end{code}
 \end{center}
+\end{frame}
+
+\begin{frame}{Evaluation mechanism summary}
+Event requests $\rightarrow$ 
+\begin{itemize}
+\item No polling because we know which events to wait for.
+\item No redundant re-evaluations because we know the event requests of each subexpression.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{In the paper...}
+\begin{itemize}
+\item Monadic FRP programming interface.
+\item Simple drawing program example.
+\item Comparison with other FRP programming interfaces \& evaluation mechanisms.
+\item Exact time semantics (|sleep 1.0| occurs strictly before |sleep 1.1|).
+
+\item ... and all the details.
+\end{itemize}
+
 \end{frame}
 
 \section{Conclusion}
@@ -485,17 +498,7 @@ Possible solution: Use open union instead.
 
 
 
-\begin{frame}{In the paper...}
-\begin{itemize}
-\item Monadic FRP programmer interface.
-\item Simple drawing program example.
-\item Comparison with other FRP evaluation mechanisms.
-\item Exact time semantics (|sleep 1.0| occurs strictly before |sleep 1.1|).
 
-\item ... and all the details.
-\end{itemize}
-
-\end{frame}
 
 \begin{frame}{Conclusion}
 \noindent Purely functional evaluation mechanism for time-branching FRP:\\
@@ -507,6 +510,52 @@ Benefits:
 \end{itemize}
 \pause
 Questions?
+\end{frame}
+
+
+\begin{frame}[noframenumbering]{Transformational vs. Reactive}
+\begin{block}{Transformational program}
+Transforms input into output.\\
+
+Examples:
+\begin{itemize}
+\item Traditional compiler
+\item Long-running scientific computation
+\end{itemize}
+\end{block}
+
+\begin{block}{Reactive program}
+Engages in a dialogue with its environment, responding to events.\\
+
+Examples:
+\begin{itemize}
+\item IDE
+\item Spreadsheet
+\item Anything with a GUI
+\end{itemize}
+\end{block}
+\end{frame}
+
+
+\begin{frame}[noframenumbering]{Why Functional Reactive Programming?}
+\begin{block}{Reactive programming means...}
+Dealing with external events which may occur in \alert{in any order}.\\
+\vspace{0.2cm}
+Traditional approaches:\\
+\begin{tabular}{l l l l}
+  & \emph{Approach} & \emph{Downside}\\
+\hline
+\inlineitem & Concurrency & non-determinism\\
+\inlineitem & Callbacks (observer pattern) & inversion of control \\
+\inlineitem & I/O multiplexing & non-composable\\
+\end{tabular}
+\end{block}
+
+\begin{block}{Functional reactive programming}
+is \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
+\end{block}
+
+
 \end{frame}
 
 
