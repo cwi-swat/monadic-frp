@@ -112,14 +112,14 @@ Examples:
 Dealing with external events which may occur in \alert{in any order}.\\
 \vspace{0.2cm}
 Traditional approaches:\\
-\begin{tabular}{l l l}
-\inlineitem & Concurrency &\only<2->{$\rightarrow$ non-determinism}\\
-\inlineitem & Blocking I/O multiplexing &\only<2->{$\rightarrow$ non-composable}\\
-\inlineitem & Callbacks (observer pattern) & \only<2->{$\rightarrow$ inversion of control} \\
+\begin{tabular}{l l l l}
+  & \emph{Approach} & \emph{Downside}\\
+\hline
+\inlineitem & Concurrency & non-determinism\\
+\inlineitem & Callbacks (observer pattern) & inversion of control \\
+\inlineitem & I/O multiplexing & non-composable\\
 \end{tabular}
 \end{block}
-\pause
-\pause
 
 \begin{block}{Functional reactive programming}
 is \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
@@ -127,129 +127,143 @@ is \alert{deterministic}, \alert{composable} and \alert{without inversion of con
 
 
 \end{frame}
-    
-\begin{frame}{Functional Reactive Programming basics}
 
+\begin{frame}{What is Monadic FRP?}
 
-\begin{block}{Signal}
-A \alert{behavior} is a value that changes over time.
-Example: The mouse position.
-\end{block}
-
-\begin{block}{Event}
-An \alert{event} (source) is a behavior that occasionally holds a value.\\
-I.e. |Event a ~= Behavior (Maybe a)|\\
-
-Example: Mouse clicks.
-\end{block}
-\end{frame}
-
-
-
-\begin{frame}<1>[label=overview]{Talk overview}
 \begin{enumerate}
-\item A monadic programmer interface for FRP
-\begin{itemize}
-\item Problem
-\item Solution
-\end{itemize}
-\item \only<1>{Evaluation mechanism} \only<2>{\alert{Evaluation mechanism}}
-\begin{itemize}
-\item Problem
-\item Solution
-\end{itemize}
+\item Alternative programmer interface for FRP
+\item \emph{This talk:} an efficient evaluation mechanism.
 \end{enumerate}
 \end{frame}
 
+\section{Problem}
+
+\begin{frame}{Two schools of FRP}
+\begin{center}
+\begin{tabular}{l || l}
+& \emph{Examples}\\
+\hline
+Single future  & Fran, Reactive, FrTime, Scala.React  \\[0.3cm]
+Time branching & Yampa, Monadic FRP \\
+\end{tabular}
+\end{center}
+\end{frame}
 
 
+\begin{frame}{Time branching}
+\vspace{-0.2cm}
+\begin{center}
+\includegraphics[scale=0.3]{drawing.pdf}\\
+\end{center}
+\vspace{-0.2cm}
+\noindent``Freeze'' a running FRP expression, convert it to a value.\\
 
-\section{Programmer interface}
+Example usages:
+\begin{itemize}
+\item Duplicate drawing in drawing program into two tabs
+\item Undo
+\item What-if?
+\end{itemize}
+
+Other names:
+\begin{itemize}
+\item Reactive level immutability
+\item Shallow causality
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Efficiency considerations}
+We do not want:
+\begin{itemize}
+\item Polling
+\item Redundant re-evaluations
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Single future evaluation mechanisms}
+
+\begin{tabular}{l l}
+\emph{Evaluation mechanism} & \emph{Example} \\
+\hline
+Push-pull  & Reactive \\
+Self-adjusting computation & FrTime, Scala.React \\
+\end{tabular}\\
+\vspace{0.2cm}
+Both efficient: prevent polling \& redundant re-evaluations
+\end{frame}
+
+\begin{frame}{Time branching}
+\begin{tabular}{l l}
+\emph{Evaluation mechanism} & \emph{Example} \\
+\hline
+Continuation based + GADT-based optimizations  & Yampa \\
+\end{tabular}\\
+\vspace{0.2cm}
+Not as efficient as single future mechanisms: 
+\begin{itemize}
+\item Does not prevent polling
+\item Prevents a large class, but not all, redundant re-evaluations
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Monadic FRP evaluation mechanism}
+Continuation based + event requests\\
+Prevents:
+\begin{itemize}
+\item Polling
+\item Redundant re-evaluations
+\end{itemize}
+
+\end{frame}
+
 \newlength{\tmathindenta}
 \setlength{\tmathindenta}{\mathindent}
-\setlength{\mathindent}{0.15cm}
+\setlength{\mathindent}{0.05cm}
 
-\begin{frame}{Traditional way of composing behavioral phases}
-\begin{code}
-<<<<<<< HEAD
-switcher :: Signal a -> Event (Signal a) -> Signal a
-=======
-switcher :: Behavior a -> Event (Behavior a) -> Behavior a
->>>>>>> 8f280c0045202e67204f59568cbe1d603556bb01
-\end{code}
-\pause
-\vspace{-0.5cm}
-\begin{block}{Example}
-\vspace{-0.4cm}
-\begin{center}
-\begin{tikzpicture}[node distance=3cm]
-\tikzset{VertexStyle/.style = {shape          = rectangle,
-                                 inner sep      = 2pt,
-                                 outer sep      = 0pt,
-                                 minimum size   = 30 pt}}
-     \node[VertexStyle,fill=green](G){};
-     \node[VertexStyle,fill=orange,right=of G](OR){};
-     \node[VertexStyle,fill=red,right=of OR](R){};   
-     %\draw[EdgeStyle](B) to node[LabelStyle]{1} (D) ;
-     %\tikzset{EdgeStyle/.append style = {bend left}}
-     \draw[thick,->](G) to node[above]{|rightClick|} (OR);
-     \draw[thick,->](OR) to node[above]{|rightClick|} (R);
-     \draw[thick,->,bend left](OR.south) to node[above]{|leftClick|} (G.south);
+\section{Solution}
 
-  \end{tikzpicture}
-\end{center}
-\vspace{-0.8cm}
-\pause
+\begin{frame}{Reactive computations}
 
-\begin{code}
-traffic :: SF MouseDown Color
-traffic = 
-  (constant green  &&& rightClick) `switch`  \_ ->  
-  (constant orange  &&& leftClick `tagBool` (notYet <<< rightClick))
-  `switch`  \r ->  if r then traffic else constant red 
-
-tagBool :: SF a (Event x) -> SF a (Event y) -> SF a (Event Bool)
-
-\end{code}
-\setlength{\mathindent}{\tmathindenta}
-\vspace{-0.8cm}
-\end{block}
-\pause
-Question: \alert{Why can't we use |>>=|?}
-\end{frame}
-\begin{frame}{Monadic FRP definitions}
-Answer: We cannot use |>>=| because behaviors cannot \alert{end}.
-\vspace{0.3cm}
-\begin{block}{Signal computation}
-A behavior that may end. \\
-|Sigg| has two type arguments:
-\begin{itemize}
-\item The type of the values of the behavior.
-\item The type of the value that it returns.
-\end{itemize}
-\vspace{-0.5cm}
-\begin{code}
-instance Monad (Sigg b) where ...
-\end{code}
-\vspace{-0.8cm}
-\end{block}
-\pause
 \begin{block}{Reactive computation}
-A signal computation that gives no information, except when it ends.
+A monadic computation which may require the occurrence of external events to continue
 \end{block}
-\vspace{-0.25cm}
+
+All Monadic FRP expressions are built using:
+  \begin{itemize}
+    \item Basic events :  \\
+% spacing!
+  Example: |mouseDown :: React GUIEv Int|
+    \item Sequential composition:\\ 
+ \begin{code}
+    (>>=) :: React e a -> (a -> React e b) -> React e b
+  \end{code}
+\item Parallel composition:  \\
+ \begin{code}
+ first :: React e a -> React e b -> React e (React e a, React e b)
+\end{code}
+\end{itemize}
+
+\end{frame}
 
 
+
+\begin{frame}{Signal computation}
+\begin{block}{Signal computation}
+A reactive computation that may also \alert{emit} values.\\
+ Defined in terms of reactive computations.
+\end{block}
 \begin{code}
-type Behaviour  a  = Sigg a Void
-type Reactg     a  = Sigg () a
-type Event      a  = Sigg (Maybe a) Void
+instance Monad (Sig e f) where ...
+waitFor   :: React e r -> Sig e f r
+emit      :: f -> Sig e f ()
 \end{code}
 
 \end{frame}
 
 
-\begin{frame}{Monadic way of composing behavioral phases}
+\begin{frame}{Signal computation example}
 
 \begin{block}{Example}
 \vspace{-0.4cm}
@@ -271,108 +285,57 @@ type Event      a  = Sigg (Maybe a) Void
   \end{tikzpicture}
 \end{center}
 \vspace{-0.6cm}
-
-
 \begin{code}
-traffic :: Sig MouseDown Color Void
+traffic :: Sig GUIEv Color Void
 traffic = 
-  do  always green `until'` rightClick
-      l <- always orange `until'` (rightClick `before` leftClick)
-      if l then traffic else always red
-\end{code}
-\begin{code}
-<<<<<<< HEAD
-always  :: a -> Sig e a Void
-until'  :: Sig a Void -> React e b -> Sig e a b
-before  :: React e x -> React e y -> React e Bool
-=======
-always  :: a -> Sigg a Void
-until'  :: Sigg a Void -> Reactg b -> Sigg a b
-before  :: Reactg x -> Reactg y -> Reactg Bool
+  do  emit green 
+      waitFor rightClick
+      emit orange
+      (r,_) <- waitFor (rightClick `first` leftClick)
+      if done r 
+      then  emit red >> waitFor hellFreezesOver 
+      else  traffic
 \end{code}
 \setlength{\mathindent}{\tmathindenta}
 \vspace{-0.8cm}
 \end{block}
 \end{frame}
 
+\begin{frame}{Idea for efficient evaluation}
 
-\section{Evaluation mechanism}
-\againframe<2>{overview}
+\begin{block}{Continuation based evaluation}
 
-
-\begin{frame}<1>[label=evalmot]{The problem with existing evaluation mechanisms}
-\begin{block}{Other FRP evaluation mechanisms either ...}
-\begin{tabular}{l p{0.5\textwidth} || p{0.35\textwidth}}
-\inlineitem & Re-evaluate whole expression after each event &$\rightarrow$ Inefficient\\
-\inlineitem & Use side-effects to prevent redundant re-evaluations &$\rightarrow$ \only<1>{?}\only<2->{No time-branching}\\
-\end{tabular}
-\end{block}
-\pause
-\pause
-
-\begin{block}{Monadic FRP ...}
-has the first \emph{purely functional} evaluation mechanism that prevents redundant re-evaluations
-\end{block}
-
-\end{frame}
-
-\begin{frame}{Time-branching}
-Suppose that drawings in a drawing program are signal computations:
-\vspace{-0.5cm}
-\begin{center}
-\includegraphics[scale=0.3]{drawing.pdf}\\
-\end{center}
-Time-branching: ``Freeze'' a running signal computation.\\
-
-Example usages:
-\begin{itemize}
-\item Duplicate drawing in drawing program into two tabs
-\item Undo
-\item What-if?
-\end{itemize}
-
-\pause
-\alert{Impossible} with impure evaluation mechanism
-
-
-\end{frame}
-\againframe<2-3>{evalmot}
-
-\begin{frame}{Basic building blocks of Monadic FRP}
-Reminder:
-\begin{block}{Reactive computation}
-A signal computation that gives no information, except when it ends.\\
 \begin{code}
-type Reactg     a  = Sigg () a
+data React e a = Now a | Later (e -> React e a) 
 \end{code}
+We do not know if an event will have any effect.
 \end{block}
 
-\begin{itemize}
-\item Actually: signal computations are defined in terms of reactive computations.
-\item All Monadic FRP expression are built using:
-  \begin{itemize}
-    \item Sequential composition: |>>=|
-\item Parallel composition:  |first|
-\end{itemize}
-\end{itemize}
-
-
-
+\begin{block}{Continuation based + requests}
+\begin{code}
+data React e a = Now a | Later (Requests e) (e -> React e a) 
+\end{code}
+Add which events the reactive computation \alert{requests}\\ (i.e. is interested in).
+\end{block}
 \end{frame}
 
-\centering
+
+
+
+
 \tikzstyle{bag} = [rectangle,text centered,draw=black,semithick,solid]
 \tikzstyle{interpret} = [rectangle, rounded corners,text centered,draw=black,semithick]
  \tikzstyle{every node}=[font=\small]
 
-\begin{frame}{Example evaluation}
+\begin{frame}{Event requests propagate upwards}
 
+\begin{center}
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
 \node[bag, name=root] {|first|}
-  [sibling distance=4.5cm]
-  child {node[bag] {|first|}[sibling distance=2cm]
+  [sibling distance=5cm]
+  child {node[bag] {|first|}[sibling distance=2.5cm]
     child {node[bag] {|mouseMove|}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -385,18 +348,17 @@ type Reactg     a  = Sigg () a
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
        %node[left]{$\{\mathit{MouseMove},$ \\ $\mathit{MouseUp}\}$}
   }
-  child {node[bag] {|>> deltaTime|} 
-      child {node[bag] {|mouseDown|}
+   child {node[bag] {|>>=|}  [sibling distance=2.5cm]
+child {node[bag] {|mouseDown|}
        edge from parent[<-]
        node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
-     }
+    }
+    child {node[bag] {|\ _ -> deltaTime|}
+       edge from parent[-]
+    }
        edge from parent[<-]
        node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
   }
-
-    
-
-
  
  ;
 \node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
@@ -405,56 +367,69 @@ type Reactg     a  = Sigg () a
 \begin{code}
 first (first mouseMove mouseUp) (mouseDown >> deltaTime) 
 \end{code}
+\end{center}
+\end{frame}
+
+\begin{frame}{Set of event requests $\rightarrow$ No polling}
+
+The reactive computation requests an events from the set:
+$$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$$
+
+
+So we can \alert{block} until such an event arrives.
+
+
 \end{frame}
 
 
-\begin{frame}{Example evaluation}
-
+\begin{frame}{Events propagate downwards: no redundant re-evalutions}
+\begin{center}
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
 \node[bag, name=root] {|first|}
-  [sibling distance=4.5cm]
-  child {node[bag] {|first|}[sibling distance=2cm]
+  [sibling distance=5cm]
+  child {node[bag] {|first|}[sibling distance=2.5cm]
     child {node[bag] {|mouseMove|}
        edge from parent[-,dashed]
-       node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
     }
     child {node[bag] {|mouseUp|}
        edge from parent[-,dashed]
-       node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseUp}\}$}
     }
        edge from parent[-,dashed]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
-       %node[left]{$\{\mathit{MouseMove},$ \\ $\mathit{MouseUp}\}$}
   }
-   child {node[bag] {|>> deltaTime|}  [sibling distance=2.4cm]
+   child {node[bag] {|>>=|}  [sibling distance=2.5cm]
 child {node[bag] {|mouseDown|}
-       edge from parent[->,very thick]
+       edge from parent[red,->,thick]
        node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
     }
-       edge from parent[->,very thick]
+    child {node[bag] {|\ _ -> deltaTime|}
+       edge from parent[black,-,dashed]
+    }
+    edge from parent[red,->,thick]
        node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
   }
  
  ;
 \node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
-\draw [<-,very thick] (root) --  (inter) node[midway,fill=white,color=white,text=black]{Observed: $\mathit{MouseDown}$};
-
-\end{tikzpicture} 
+\draw [red,<-,thick] (root) --  (inter) node[midway,fill=white,color=white,text=black]{Observed : $\{\mathit{MouseDown}\:\mathit{MLeft}\}$};
+\end{tikzpicture}
 \begin{code}
 first (first mouseMove mouseUp) (mouseDown >> deltaTime) 
 \end{code}
+\end{center}
 \end{frame}
 
-\begin{frame}{Example evaluation}
+\begin{frame}{Next state}
 
+\begin{center}
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
 \node[bag, name=root] {|first|}
-  [sibling distance=4.5cm]
-  child {node[bag] {|first|}[sibling distance=2cm]
+  [sibling distance=5cm]
+  child {node[bag] {|first|}[sibling distance=2.5cm]
     child {node[bag] {|mouseMove|}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -467,7 +442,13 @@ first (first mouseMove mouseUp) (mouseDown >> deltaTime)
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
        %node[left]{$\{\mathit{MouseMove},$ \\ $\mathit{MouseUp}\}$}
   }
-   child {node[bag] {|deltaTime|}  [sibling distance=2.4cm]
+   child {node[bag] {|deltaTime|}  [sibling distance=2.5cm]
+child {node[fill=white,color=white,text=white] {|mouseDown|}
+edge from parent[white]
+    }
+    child {node[fill=white,color=white,text=white] {|\ _ -> deltaTime|}
+edge from parent[white]
+    }
        edge from parent[<-]
        node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{DeltaTime}\}$}
   }
@@ -476,33 +457,57 @@ first (first mouseMove mouseUp) (mouseDown >> deltaTime)
 \node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {Reactive Interpreter};
 \draw [->] (root) --  (inter) node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{DeltaTime}\}$};
 \end{tikzpicture} 
+
 \begin{code}
 first (first mouseMove mouseUp) deltaTime
 \end{code}
+\end{center}
+\end{frame}
+
+\section{Conclusion}
+\begin{frame}{Future work}
+Implementation of evaluation mechanism currently relies on \emph{closed} union of possible basic events.\\
+Downsides:
+\begin{itemize}
+\item requires explicit memoization for reactive level sharing.
+\item reactive level recursion is (very) problematic.
+\end{itemize}
+Continuation based + GADT-based optimizations mechanism (Yampa) does not have these problems.\\
+
+\vspace{0.5cm}
+
+Possible solution: Use open union instead.
 \end{frame}
 
 
 
 
-\section{Conclusion}
+
+
 
 \begin{frame}{In the paper...}
 \begin{itemize}
-\item Full simple drawing program example.
-\item Signal computations can end $\rightarrow$ easier dynamic lists.
-\item Usage \& definition of various useful combinators.
+\item Monadic FRP programmer interface.
+\item Simple drawing program example.
+\item Comparison with other FRP evaluation mechanisms.
+\item Exact time semantics (|sleep 1.0| occurs strictly before |sleep 1.1|).
+
 \item ... and all the details.
 \end{itemize}
 
 \end{frame}
 
-\begin{frame}{Monadic FRP: Conclusion}
+\begin{frame}{Conclusion}
+\noindent Purely functional evaluation mechanism for time-branching FRP:\\
+\hspace{0.5cm}Continuation based + event requests\\
+Benefits:
 \begin{itemize}
-\item Monadic interface makes sequencing behavioral phases easier.
-\item Evaluation model is efficient while still allowing time-branching.
+\item No polling
+\item No redundant re-evaluations.
 \end{itemize}
 \pause
 Questions?
 \end{frame}
+
 
 \end{document}
