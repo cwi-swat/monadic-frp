@@ -120,20 +120,19 @@ Functional ways of reactive programming, which are \alert{deterministic}, \alert
 \begin{frame}{Two schools of Functional Reactive Programming}
 
 \begin{block}{Single future}
-Examples: Fran, Reactive, FrTime, Scala.React \\
-\vspace{-0.3cm}
+
+\vspace{-0.45cm}
 \begin{center}
-\includegraphics[scale=0.25]{free-will.jpg}
+\includegraphics[scale=0.35]{free-will.jpg}
 \end{center}
 \vspace{-0.5cm}
+Examples: Fran, Reactive, FrTime, Scala.React 
+
 \end{block}
 \begin{block}{Time branching}
 Example: Yampa
-\vspace{-0.3cm}
-\begin{center}
-\includegraphics[scale=0.15]{many-worlds.png}
-\end{center}
-\vspace{-0.2cm}
+\includegraphics[scale=0.17]{many-worlds.png}
+
 \end{block}
 
 \end{frame}
@@ -159,11 +158,10 @@ Example usages:
 \section{Problem}
 \begin{frame}{Efficiency considerations}
 We do not want:
-
-\begin{itemize}
-\item Polling \hfill\includegraphics[scale=0.3]{are-we-there-yet.jpg}
-\item Redundant re-evaluations\hfill\includegraphics[scale=0.3]{recompute.png}
-\end{itemize}
+\begin{tabular}{l l c}
+\inlineitem & Polling & \includegraphics[scale=0.33]{are-we-there-yet.jpg} \\
+\inlineitem & Redundant re-evaluations & \includegraphics[scale=0.3]{recompute.png}
+\end{tabular}
 
 \end{frame}
 
@@ -223,17 +221,19 @@ A monadic computation which may require the occurrence of external events to con
 
 All Monadic FRP expressions are built using:
   \begin{itemize}
-    \item Basic events :  \\
-% spacing!
-  Example: |mouseDown :: React GUIEv Int|
+    \item Basic events.  \\
+\vspace{0.3cm}
+  Example: |mouseDown :: React GUIEv MBtn|
+\vspace{0.3cm}
     \item Sequential composition:\\ 
  \begin{code}
     (>>=) :: React e a -> (a -> React e b) -> React e b
   \end{code}
 \item Parallel composition:  \\
  \begin{code}
- first :: React e a -> React e b -> React e (React e a, React e b)
+ parR :: React e a -> React e b -> React e (React e a, React e b)
 \end{code}
+Notice: |flip parR == parR|
 \end{itemize}
 
 \end{frame}
@@ -282,7 +282,7 @@ traffic =
   do  emit green 
       waitFor rightClick
       emit orange
-      (r,_) <- waitFor (rightClick `first` leftClick)
+      (r,_) <- waitFor (rightClick `parR` leftClick)
       if done r 
       then  emit red >> waitFor hellFreezesOver 
       else  traffic
@@ -316,7 +316,7 @@ Handle event requests in some Monad (for example IO):
 \begin{code}
 interpret ::  Monad m => (Requests e -> m e) 
               -> React e a -> m a
-interpret p (Now a)      = return a
+interpret p (Done a)     = return a
 interpret p (Later r c)  = p r >>= interpret p . c
 \end{code}
 \end{block}
@@ -333,46 +333,50 @@ interpretSig ::  Monad m  => (Requests e -> m e)
 
 
 
-\tikzstyle{bag} = [rectangle,text centered,draw=black,semithick,solid]
+\tikzstyle{bag} = [rectangle,text centered,semithick,solid,draw=black]
 \tikzstyle{interpret} = [rectangle, rounded corners,text centered,draw=black,semithick]
  \tikzstyle{every node}=[font=\small]
+
+\tikzset{onslide/.code args={<#1>#2}{%
+  \only<#1>{\pgfkeysalso{#2}} % \pgfkeysalso doesn't change the path
+}}
 
 \begin{frame}{Event requests propagate upwards}
 
 \begin{center}
-\begin{tikzpicture}[grow=down, level distance=60pt]
+\begin{tikzpicture}[highlight/.style={draw=blue, text=blue},draw=black,text=black,grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {|first|}
+\node[bag, name=root,onslide={<5> highlight}] {|parR|}
   [sibling distance=5cm]
-  child {node[bag] {|first|}[sibling distance=2.5cm]
-    child {node[bag] {|mouseMove|}
-       edge from parent[<-]
-       node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
+  child {node[bag,onslide={<3> highlight}] {|parR|}[sibling distance=2.5cm]
+    child {node[bag,onslide={<2> highlight}] {|mouseMove|}
+       edge from parent[<-,black,onslide={<2,3> highlight}]
+       node[xshift=-15pt,midway,fill=white,onslide={<2,3> text=blue}]{$\{\mathit{MouseMove}\}$}
     }
-    child {node[bag] {|mouseUp|}
-       edge from parent[<-]
-       node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseUp}\}$}
+    child {node[bag,onslide={<2> highlight}] {|mouseUp|}
+       edge from parent[<-,black,onslide={<2,3> highlight}]
+       node[xshift=+15pt,midway,fill=white,onslide={<2,3> text=blue}]{$\{\mathit{MouseUp}\}$}
     }
-       edge from parent[<-]
-       node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
+       edge from parent[<-,black,onslide={<3,5> highlight}]
+       node[xshift=-15pt,midway,fill=white,onslide={<3,5> text=blue}]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
        %node[left]{$\{\mathit{MouseMove},$ \\ $\mathit{MouseUp}\}$}
   }
-   child {node[bag] {|>>=|}  [sibling distance=2.5cm]
-child {node[bag] {|mouseDown|}
-       edge from parent[<-]
-       node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
+   child {node[bag,onslide={<4> highlight}] {|>>=|}  [sibling distance=2.5cm]
+child {node[bag,onslide={<2> highlight}] {|mouseDown|}
+       edge from parent[<-,black,onslide={<2,4> highlight}]
+       node[midway,fill=white,onslide={<2,4> text=blue}]{$\{\mathit{MouseDown}\}$}
     }
     child {node[bag] {|\ _ -> deltaTime|}
-       edge from parent[-]
+       edge from parent[-,black,onslide={<4> highlight}]
     }
-       edge from parent[<-]
-       node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
+       edge from parent[<-,black,onslide={<4,5> highlight}]
+       node[xshift=+15pt,midway,fill=white,onslide={<4,5> text=blue}]{$\{\mathit{MouseDown}\}$}
   }
  
  ;
 \node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {|interpret|};
-\draw [->] (root) --  (inter) node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$};
+\draw [->,onslide={<5> highlight}] (root) --  (inter) node[midway,fill=white,onslide={<5> text=blue}]{$\{\mathit{MouseMove},\mathit{MouseUp}, \mathit{MouseDown}\}$};
 \end{tikzpicture} 
 \begin{code}
 first (first mouseMove mouseUp) (mouseDown >> deltaTime) 
@@ -391,7 +395,7 @@ This set is passed to the function |p|, which handles event requests. |p| can \a
 \begin{code}
 interpret ::  Monad m => (Requests e -> m e) 
               -> React e a -> m a
-interpret p (Now a)      = return a
+interpret p (Done a)     = return a
 interpret p (Later r c)  = p r >>= interpret p . c
 \end{code}
 
@@ -402,12 +406,12 @@ interpret p (Later r c)  = p r >>= interpret p . c
 
 \begin{frame}{Events propagate downwards: no redundant re-evalutions}
 \begin{center}
-\begin{tikzpicture}[grow=down, level distance=60pt]
+\begin{tikzpicture}[highlight/.style={draw=blue, text=blue},grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {|first|}
+\node[bag, name=root,onslide={<1> highlight}] {|parR|}
   [sibling distance=5cm]
-  child {node[bag] {|first|}[sibling distance=2.5cm]
+  child {node[bag] {|parR|}[sibling distance=2.5cm]
     child {node[bag] {|mouseMove|}
        edge from parent[-,dashed]
     }
@@ -415,26 +419,26 @@ interpret p (Later r c)  = p r >>= interpret p . c
        edge from parent[-,dashed]
     }
        edge from parent[-,dashed]
-       node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
+       node[xshift=-15pt,midway,fill=white,color=white,text=black,onslide={<1> text=blue}]{$\{\mathit{MouseMove},\mathit{MouseUp}\}$}
   }
-   child {node[bag] {|>>=|}  [sibling distance=2.5cm]
-child {node[bag] {|mouseDown|}
-       edge from parent[red,->,thick]
+   child {node[bag,onslide={<2> highlight}] {|>>=|}  [sibling distance=2.5cm]
+child {node[bag,onslide={<3> highlight}] {|mouseDown|}
+       edge from parent[black,->,thick,onslide={<3> draw=red}]
        node[midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
     }
     child {node[bag] {|\ _ -> deltaTime|}
        edge from parent[black,-,dashed]
     }
-    edge from parent[red,->,thick]
-       node[xshift=+15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseDown}\}$}
+    edge from parent[black,->,thick,onslide={<2> draw=red}]
+       node[xshift=+15pt,midway,fill=white,color=white,text=black,onslide={<1> text=blue}]{$\{\mathit{MouseDown}\}$}
   }
  
  ;
 \node[interpret,above of=root,yshift=+20pt,name=inter,text width=3cm] {|interpret|};
-\draw [red,<-,thick] (root) --  (inter) node[midway,fill=white,color=white,text=black]{Observed : $\{\mathit{MouseDown}\:\mathit{MLeft}\}$};
+\draw [red,<-,thick] (root) --  (inter) node[midway,fill=white,color=white,text=black,onslide={<1,3> text=blue}]{Observed : $\{\mathit{MouseDown}\:\mathit{MLeft}\}$};
 \end{tikzpicture}
 \begin{code}
-first (first mouseMove mouseUp) (mouseDown >> deltaTime) 
+parR (parR mouseMove mouseUp) (mouseDown >> deltaTime) 
 \end{code}
 \end{center}
 \end{frame}
@@ -445,9 +449,9 @@ first (first mouseMove mouseUp) (mouseDown >> deltaTime)
 \begin{tikzpicture}[grow=down, level distance=60pt]
 [-]
 
-\node[bag, name=root] {|first|}
+\node[bag, name=root] {|parR|}
   [sibling distance=5cm]
-  child {node[bag] {|first|}[sibling distance=2.5cm]
+  child {node[bag] {|parR|}[sibling distance=2.5cm]
     child {node[bag] {|mouseMove|}
        edge from parent[<-]
        node[xshift=-15pt,midway,fill=white,color=white,text=black]{$\{\mathit{MouseMove}\}$}
@@ -539,11 +543,29 @@ Benefits:
 \pause
 Questions?
 \end{frame}
+\newcommand{\backupbegin}{
+   \newcounter{framenumberappendix}
+   \setcounter{framenumberappendix}{\value{framenumber}}
+}
+\newcommand{\backupend}{
+   \addtocounter{framenumberappendix}{-\value{framenumber}}
+   \addtocounter{framenumber}{\value{framenumberappendix}} 
+}
+\appendix
+\backupbegin
 
+\begin{frame}{Question: Cost of requests}
 
+\end{frame}
 
+\begin{frame}{Question: Comparison with Fudgets-style stream processors}
 
+\end{frame}
 
+\begin{frame}{Question: Which class of redundant computations?}
+
+\end{frame}
+\backupend
 
 
 \end{document}
