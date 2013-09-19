@@ -60,7 +60,7 @@ Centrum Wiskunde \& Informatica, Amsterdam, The Netherlands}
 
 %--- the titlepage frame -------------------------%
 
-\begin{frame}[plain]
+\begin{frame}[noframenumbering,plain]
 \begin{center}
   \scalebox{12}{$\bind$}
 \end{center}
@@ -108,7 +108,7 @@ Traditional approaches:\\
 \end{block}
 
 \begin{block}{Functional reactive programming}
-Functional ways of reactive programming, which are \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
+Umbrella term for functional ways of reactive programming, which are \alert{deterministic}, \alert{composable} and \alert{without inversion of control}.
 \end{block}
 
 
@@ -429,7 +429,7 @@ child {node[bag,onslide={<3> highlight}] {|mouseDown|}
     child {node[bag] {|\ _ -> deltaTime|}
        edge from parent[black,-,dashed]
     }
-    edge from parent[black,->,thick,onslide={<2> draw=red}]
+    edge from parent[black,->,thick,onslide={<2,3> draw=red}]
        node[xshift=+15pt,midway,fill=white,color=white,text=black,onslide={<1> text=blue}]{$\{\mathit{MouseDown}\}$}
   }
  
