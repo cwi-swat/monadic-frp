@@ -24,6 +24,8 @@ import Data.Sequence
 
 
 
+
+
 data Gestures = GUp | GRight | GDown | GLeft deriving Show
 
 gestureType (x,y) 
@@ -84,11 +86,11 @@ tabs i l =
                      animateSwitchLeft li ri
                      tabs (i - 1) l'
            _  -> tabs i l'
-  where animateDup         l   = pure (++) <*> pure l <*> animateExitLeft l
-        animateDeleleteToR l r = pure (++) <*> animateExitDown l <*> animateEnterRight r 
-        animateDeleleteToL r l = pure (++) <*> animateExitDown r <*> animateEnterLeft l
-        animateSwitchRight l r = pure (++) <*> animateExitLeft l <*> animateEnterRight r
-        animateSwitchLeft  l r = pure (++) <*> animateExitRight l <*> animateEnterLeft r
+  where animateDup         l   = always (++) <^> always l <^> animateExitLeft l
+        animateDeleleteToR l r = always (++) <^> animateExitDown l   <^> animateEnterRight r 
+        animateDeleleteToL r l = always (++) <^> animateExitDown r   <^> animateEnterLeft l
+        animateSwitchRight l r = always (++) <^> animateExitLeft l   <^> animateEnterRight r
+        animateSwitchLeft  l r = always (++) <^> animateExitRight l  <^> animateEnterLeft r
 
 animPoints = map (\t -> sin (t * 0.5 * pi)) (frac 0.7)
 animateMove f = map f animPoints

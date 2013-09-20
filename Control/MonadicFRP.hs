@@ -1,6 +1,64 @@
 {-# LANGUAGE TupleSections, NoMonomorphismRestriction #-}
--- | Monadic FRP basic definitions and composition functions. See the paper "Monadic Functional Reactive Programming" Atze van der Ploeg. Haskell Symposium '13<http://homepages.cwi.nl/~ploeg/papers/monfrp.pdf>. An example can be found at <https://github.com/cwi-swat/monadic-frp>. A function preprended with i indices a initialized signal variant of an signal computation function. 
-module Control.MonadicFRP where
+-- | Monadic FRP basic definitions and composition functions. 
+--   See the paper "Monadic Functional Reactive Programming" Atze van der Ploeg. Haskell Symposium '13<http://homepages.cwi.nl/~ploeg/papers/monfrp.pdf>. An example can be found at <https://github.com/cwi-swat/monadic-frp>.
+-- 
+--  Notice that currently Monadic FRP relies on a closed union (ADT) of basic events, which has the following downsides:
+--    * Reactive level sharing requires an explicit call to a memoization function
+--    * Reactive level recursion is problematic.
+--
+--
+--  A function preprended with i indices a initialized signal variant of an signal computation function. 
+module Control.MonadicFRP( 
+ Event(..),
+ EvReqs,
+ EvOccs,
+ React(..),
+ exper,
+ interpret,
+ Sig(..),
+ ISig(..),
+ interpretSig,
+ first,
+ parR,
+  update,
+filterOccs,
+ repeat,
+ spawn,
+ map,
+ imap,
+ scanl,
+ iscanl,
+ break,
+ ibreak,
+ foldl,
+ ifoldl,
+ find,
+ at,
+ until,
+ iuntil,
+ (<^>),
+ pairs,
+ bothStart,
+ indexBy,
+ iindexBy,
+ emitAll,
+ emit,
+ always,
+ waitFor,
+ hold,
+ res,
+ ires,
+ cur,
+ icur,
+ done,
+ done',
+ cons,
+ parList,
+ iparList,
+ memo,
+ memoSig,
+ imemoSig)
+ where
 import Data.Set hiding (map,filter,foldl)
 import qualified Data.Set as Set
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl)
@@ -8,7 +66,11 @@ import Data.Maybe
 import Control.Monad
 import qualified Memo as Memo
 
-
+-- Imports just for memo function:
+import System.IO.Unsafe
+import Data.IORef
+import qualified Data.Map as Map
+import System.Mem.Weak
 
 -- * Basic definitions
 
@@ -66,7 +128,12 @@ instance Monad (React e) where
   (Await e c)  >>= f  = Await e ((>>= f) . c)
   (Done v)     >>= f  = f v
 
+
 -- | Run two reactive computations in parallel until either completes, and return the state of both.
+--    Notice that 
+-- @
+--     flip first == first
+--  @
 first ::  Ord e =>    React e a ->  React e b ->
           React e (   React e a ,   React e b)
 first l r = case (l,r) of
@@ -76,6 +143,8 @@ first l r = case (l,r) of
       in Await e c
   _ -> Done (l,r)
 
+-- | Alias for |first|
+parR = first
 
 -- | Call the continuation function of a reactive computation if it awaits at least one of the event occurences.
 update :: Ord e => React e a -> EvOccs e -> React e a
@@ -162,7 +231,7 @@ iuntil (h :| Sig t)  a = h :| Sig (fmap cont (first t a))
          cont (t,Done a) = End (h :| Sig t, Done a)
 
 -- | Apply the values from the second signal computation to the values from the first signal computation over time. When one ends, the new state of both is returned.
-l <*> r = do  (l,r) <- waitFor (bothStart l r)
+l <^> r = do  (l,r) <- waitFor (bothStart l r)
               emitAll (imap (\(f,a) -> f a) (pairs l r))
 
 -- | Wait for both signal computation to become initialized, and then return both their initizialized signals.
@@ -200,7 +269,7 @@ emitAll    = Sig . Done
 -- | Emit a single value in the signal computation mondad
 emit a = emitAll (a :| return ()) 
 -- | A signal that alway has the given form.
-pure a     = emit a >> hold   
+always a     = emit a >> hold   
 -- | Convert a reactive computation to a signal computation.
 waitFor a  = Sig (fmap End a)
 -- | The reactive computation that never completes.
@@ -252,7 +321,7 @@ iparList l = rl ([] :| hold) l >> return () where
 
 -- | Memoize the continuation function of the reactive computation, and the continuation function of all next states.
 memo :: Ord e => React e a -> React e a
-memo (Await r c) = Await r (Memo.memo (memo . c))
+memo (Await r c) = Await r (memof (memo . c))
 memo (Done a)    = Done a
 
 -- | Memoize the reactive computation of the initialized signal, and memoize the signal computation of the tail (if any).
@@ -262,4 +331,29 @@ memoSig (Sig l) = Sig (memo (fmap imemoSig l))
 imemoSig (h :| t)  = h :| memoSig t
 imemoSig (End a)   =  End a
 
+
+
+-- Give a memoized version of the argument function. (not exported)
+memof :: Ord a => (a -> b) -> (a -> b)
+
+memof f = (\x -> unsafePerformIO (lookup x))
+  where ref = unsafePerformIO (newIORef (f,Map.empty))
+        cleanup k = do (_,m) <- readIORef ref
+                       let m' = Map.delete k m
+                       writeIORef ref (f,m')
+        addKey k v = do w <- mkWeak k v (Just (cleanup k))
+                        (_,m) <- readIORef ref
+                        let m' = Map.insert k w m
+                        writeIORef ref (f,m')
+        lookup k = do (_,m) <- readIORef ref
+                      let w = Map.lookup k m
+                      if isJust w 
+                       then do w' <- deRefWeak (fromJust w)
+                               if isJust w' 
+                                then return (fromJust w')
+                                else  compute k
+                       else compute k
+        compute k = do addKey k v 
+                       return v
+             where v = f k
 

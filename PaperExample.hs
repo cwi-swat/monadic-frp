@@ -126,7 +126,7 @@ defineRect = do  Just p1  <-  waitFor firstPoint
 
 chooseBoxColor :: Rect -> Sigg Box ()
 chooseBoxColor r = 
-  do  pure Box <*> wiggleRect r <*> cycleColor
+  do  always Box <^> wiggleRect r <^> cycleColor
       return ()
 
 
