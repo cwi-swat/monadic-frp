@@ -1,4 +1,5 @@
-Code accompanying the paper "Monadic Functional Reactive Programming"
+Code accompanying the paper "Monadic Functional Reactive Programming" Atze van der Ploeg, Haskell Symposium '13.
+Paper available at http://homepages.cwi.nl/~ploeg/papers/monfrp.pdf
 
 The documentation is at http://homepages.cwi.nl/~ploeg/sfrpdocs/
 
