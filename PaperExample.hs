@@ -89,9 +89,6 @@ mousePos = repeat mouseMove
 curRect :: Point -> Sigg Rect ()
 curRect p1 = map (Rect p1) mousePos
 
--- data Rect    = Rect {leftup :: Point, rightdown :: Point}
-
-
 elapsed :: Sigg Time ()
 elapsed = scanl (+) 0 (repeat deltaTime)
 
