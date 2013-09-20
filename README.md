@@ -25,7 +25,7 @@ Tab actions are super awesomely animated!
 At the start there is only one tab, so the only tab action that is possible is to duplicate it.
 
 The code for :
-  * the library is in Control/SFRP.hs
+  * the library is in Control/MonadicFRP.hs
   * SDL interpreter is SDLSFRP.hs
   * the drawing program in the paper is in PaperExample.hs
   * the tabbed drawing program mentioned in the paper is in TabbedBoxes.hs
