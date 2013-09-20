@@ -1,6 +1,6 @@
-Name:                symmetric-frp-example
+Name:                monadic-frp-example
 Version:             0.6
-Description:         Symmetric FRP Example
+Description:         Monadic FRP Example
 License:             PublicDomain
 Author:              Atze van der Ploeg
 Maintainer:          ploeg@cwi.nl

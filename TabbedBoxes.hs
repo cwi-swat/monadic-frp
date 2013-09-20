@@ -15,7 +15,7 @@
 module TabbedBoxes where
 
 import PaperExample
-import Control.SFRP hiding (update)
+import Control.MonadicFRP hiding (update)
 import SDLSFRP
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl,length,splitAt,drop,take)
 import qualified Prelude as P

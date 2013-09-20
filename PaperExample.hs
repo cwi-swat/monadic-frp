@@ -3,7 +3,7 @@
 module PaperExample where
 
 import Control.Monad.State.Lazy
-import Control.SFRP
+import Control.MonadicFRP
 import Data.Set hiding (map,filter)
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,tail )
 import qualified Prelude as P

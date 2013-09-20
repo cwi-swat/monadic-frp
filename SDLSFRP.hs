@@ -6,7 +6,7 @@ import Prelude
 import Graphics.UI.SDL hiding (update,Rect,Color,Event)
 import Data.Set hiding (foldl, map, null)
 import qualified Graphics.UI.SDL as SDL
-import Control.SFRP hiding (map,foldl)
+import Control.MonadicFRP hiding (map,foldl)
 
 import Data.Maybe
 import qualified Data.Set as Set

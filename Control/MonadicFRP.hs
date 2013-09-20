@@ -1,6 +1,6 @@
 {-# LANGUAGE TupleSections, NoMonomorphismRestriction #-}
--- | Symmetric FRP basic definitions and composition functions. A function preprended with i indices a initialized signal variant of an signal computation function.
-module Control.SFRP where
+-- | Monadic FRP basic definitions and composition functions. See the paper "Monadic Functional Reactive Programming" Atze van der Ploeg. Haskell Symposium '13<http://homepages.cwi.nl/~ploeg/papers/monfrp.pdf>. An example can be found at <https://github.com/cwi-swat/monadic-frp>. A function preprended with i indices a initialized signal variant of an signal computation function. 
+module Control.MonadicFRP where
 import Data.Set hiding (map,filter,foldl)
 import qualified Data.Set as Set
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl)

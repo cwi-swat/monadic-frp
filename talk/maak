@@ -1,0 +1,2 @@
+lhs2TeX talk.tex > talkdone.tex
+pdflatex talkdone.tex
