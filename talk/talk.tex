@@ -156,12 +156,21 @@ Example usages:
 
 \end{frame}
 \section{Problem}
-\begin{frame}{Efficiency considerations}
-We do not want:
-\begin{tabular}{l l c}
-\inlineitem & Polling & \includegraphics[scale=0.33]{are-we-there-yet.jpg} \\
-\inlineitem & Redundant re-evaluations & \includegraphics[scale=0.3]{recompute.png}
-\end{tabular}
+\begin{frame}{Efficiency considerations: We do not want ...}
+\begin{block}{Polling}
+\vspace{-0.45cm}
+\begin{center}
+\includegraphics[scale=0.33]{are-we-there-yet.jpg} 
+\end{center}
+\vspace{-0.5cm}
+\end{block}
+\begin{block}{Redundant re-evaluations}
+\vspace{-0.45cm}
+\begin{center}
+\includegraphics[scale=0.28]{recompute.png}
+\end{center}
+\vspace{-0.5cm}
+\end{block}
 
 \end{frame}
 
@@ -173,7 +182,7 @@ We do not want:
 Reactive & Push-pull \\
 FrTime, Scala.React & Self-adjusting computation \\
 \end{tabular}\\
-\vspace{0.2cm}
+\vspace{1cm}
 Both efficient: prevent polling \& redundant re-evaluations
 \end{frame}
 
@@ -184,7 +193,7 @@ Both efficient: prevent polling \& redundant re-evaluations
 \hline
 Yampa & Continuation based + GADT-based optimizations  \\
 \end{tabular}\\
-\vspace{0.2cm}
+\vspace{1cm}
 Not as efficient as single future mechanisms: 
 \begin{itemize}
 \item Does not prevent polling
@@ -283,9 +292,9 @@ traffic =
       waitFor rightClick
       emit orange
       (r,_) <- waitFor (rightClick `parR` leftClick)
-      if done r 
-      then  emit red >> waitFor hellFreezesOver 
-      else  traffic
+      case r of
+       Done _  ->  emit red >> waitFor hellFreezesOver 
+       _       ->  traffic
 \end{code}
 \setlength{\mathindent}{\tmathindenta}
 \vspace{-0.8cm}
@@ -489,25 +498,13 @@ first (first mouseMove mouseUp) deltaTime
 \begin{frame}{Evaluation mechanism summary}
 Event requests $\rightarrow$ 
 \begin{itemize}
-\item No polling because we know which events to wait for.
-\item No redundant re-evaluations because we know the event requests of each subexpression.
+\item Know which events to wait for\\ $\rightarrow$ No polling
+\item Know the event requests of each subexpression\\ $\rightarrow$ No redundant re-evaluations
 \end{itemize}
 
 \end{frame}
 
 \section{Conclusion}
-
-\begin{frame}{In the paper...}
-\begin{itemize}
-\item Monadic FRP programming interface.
-\item Simple drawing program example.
-\item Comparison with other FRP programming interfaces \& evaluation mechanisms.
-\item Exact time semantics (|sleep 1.0| occurs strictly before |sleep 1.1|).
-
-\item ... and all the details.
-\end{itemize}
-
-\end{frame}
 
 
 \begin{frame}{Future work}
@@ -523,6 +520,20 @@ Continuation based + GADT-based optimizations mechanism (Yampa) does not have th
 
 Possible solution: Use open union instead.
 \end{frame}
+
+\begin{frame}{In the paper...}
+\begin{itemize}
+\item Monadic FRP programming interface: sequencing phases more primitive than other approaches.
+\item Drawing program example.
+\item Comparison with other FRP programming interfaces \& evaluation mechanisms.
+\item Exact time semantics (|sleep 1.0| occurs strictly before |sleep 1.1|).
+
+\item ... and all the details.
+\end{itemize}
+
+\end{frame}
+
+
 
 
 
@@ -540,8 +551,6 @@ Benefits:
 \item No polling
 \item No redundant re-evaluations.
 \end{itemize}
-\pause
-Questions?
 \end{frame}
 \newcommand{\backupbegin}{
    \newcounter{framenumberappendix}
@@ -555,14 +564,64 @@ Questions?
 \backupbegin
 
 \begin{frame}{Question: Cost of requests}
+\begin{itemize}
+\item Bounded by number of basic events $m$.
+\item $< mn$, where $n$ is the number of nodes in the expression tree.
+\item Sets along expression tree very structured \\$\rightarrow$ more efficient representation may exist.
+\end{itemize}
+
+
 
 \end{frame}
 
 \begin{frame}{Question: Comparison with Fudgets-style stream processors}
+\begin{itemize}
+\item In Fudgets: Multiple inputs (streams) are joined into one input $\rightarrow$ Lose information on what is new.
+\item In Fudgets: Routing is static $\rightarrow$ we do not know which subset of static events we are interested in \alert{at runtime}.\\ In Monadic FRP: routing is dynamic.
+\end{itemize}
+
+
+\end{frame}
+
+\begin{frame}{Question: Time branching and Logic?}
+\begin{itemize}
+\item Single future semantics FRP  $\rightarrow$  Linear Temporal Logic.\\ See: \emph{``LTL types FRP:  Linear-time Temporal Logic Propositions as Types, Proofs as Functional Reactive Programs''} Alan Jeffrey. PLPV '12.
+\item Time branching FRP $\rightarrow$ Computation Tree Logic ?
+\end{itemize}
+
 
 \end{frame}
 
 \begin{frame}{Question: Which class of redundant computations?}
+\emph{``Dynamic Optimization for Functional Reactive Programming
+using GADTs''}, Hendrik Nilsson, ICFP '05.\\
+
+Covered by GADT based optimizations \& event requests:
+\begin{itemize}
+\item Implicitly memoize SFs of type |SF (Event a) b| for |NoEvent|
+\item Implicitly memoize stateful SFs using
+|sfsScan :: (c -> a -> Maybe (c,b)) -> c -> SF a b|
+Examples: |filter, scan, map|
+\end{itemize}
+Not covered by GADT based optimizations, Covered by event requests:
+\begin{itemize}
+\item Stateful custom signal function.
+\item Stateless signal functions of another form.
+\end{itemize}
+
+In Arrowized FRP, each signal function must emit on each time step, even if output did not change. \\Not true in Monadic FRP.
+
+\end{frame}
+
+\begin{frame}{Question: Continuous vs. discrete time?}
+\begin{itemize}
+\item Monadic FRP: No strong distinction between continuous and discrete.
+\item Continuous time signal computations depend on event |DeltaTime|.
+\item |DeltaTime| is conceptually infinitesimal small change in time.
+\item This may give continuous time semantics, see \emph{``Hyperstream processing
+systems: nonstandard modeling of continuous-time signals''} K. Suenaga, H. Sekine, and I. Hasuo. POPL '13
+\end{itemize}
+
 
 \end{frame}
 \backupend
