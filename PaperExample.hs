@@ -29,59 +29,8 @@ deltaTime  = exper (DeltaTime Request) >>= get
   where get (DeltaTime (Occurred t)) = return t
 
 
-data EvInt = UpInt (Event Int) deriving (Eq,Ord)
-getInt :: React EvInt Int
-getInt = exper (UpInt Request) >>= get
-  where get (UpInt (Occurred i)) = return i
 
-updateMinMax :: Int -> Int -> Sig EvInt a (Int,Int)
-updateMinMax mi mx = do i <- waitFor getInt; return (up i) where
-   up i = (min mi i, max mx i)
 
-data Void
-
-untilR :: Ord e => Sig e a Void -> Sig e Void b -> Sig e a b
-untilR a b = do (_, End b) <- pure (\x y -> x) <*> a <*> b
-                return b
-
-constant = pure
-always = pure
-green = head colors
-red = green
-orange = green
-
-traffic :: Sig GUIEv Color Void
-traffic = 
-  do always green `until'` rightClick
-     l <- always orange `until'` (rightClick `before` leftClick)
-     if l then traffic else always red
-before :: React a x -> React a y -> React Bool
-
-until' :: Ord e => Sig e a r -> React e b -> Sig e a b
-until' a b = fmap (\(_,Done a) -> a) $ a `until` b 
-
-{-
-ding2 :: Sig EvInt Int Void
-ding2 = evalStateT di (0,0) where
-  di = do (mi,_)  <- get
-          lift  constant mi        `untilR` update
-          (_,mx) <- get
-          lift $ constant mx        `untilR` update
-          (mi,mx) <- get
-          lift $ constant (mi + mx) `untilR` update
-          di
-
-  update = do i <- lift $ waitFor (getInt)
-              (mi,mx) <- get
-              put (min i mi, max i mx)
-
-ding :: Int -> Int -> Sig EvInt Int Void
-ding mi mx = do  (mi,mx) <- constant mi      `untilR` updateMinMax mi mx
-                 (mi,mx) <- constant mx      `untilR` updateMinMax mi mx
-                 (mi,mx) <- constant (mi+mx) `untilR` updateMinMax mi mx
-                 ding mi mx
-
--}
 tryWait t = exper (TryWait t Request) >>= get
   where get (TryWait _ (Occurred t)) = return t
 
