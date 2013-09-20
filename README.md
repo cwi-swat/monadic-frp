@@ -1,4 +1,5 @@
-Code accompanying the paper "Monadic Functional Reactive Programming"
+Code accompanying the paper "Monadic Functional Reactive Programming" Atze van der Ploeg, Haskell Symposium '13.
+Paper available at http://homepages.cwi.nl/~ploeg/papers/monfrp.pdf
 
 The documentation is at http://homepages.cwi.nl/~ploeg/sfrpdocs/
 
@@ -24,7 +25,7 @@ Tab actions are super awesomely animated!
 At the start there is only one tab, so the only tab action that is possible is to duplicate it.
 
 The code for :
-  * the library is in Control/SFRP.hs
+  * the library is in Control/MonadicFRP.hs
   * SDL interpreter is SDLSFRP.hs
   * the drawing program in the paper is in PaperExample.hs
   * the tabbed drawing program mentioned in the paper is in TabbedBoxes.hs
