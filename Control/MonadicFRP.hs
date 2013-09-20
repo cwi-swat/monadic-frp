@@ -64,7 +64,6 @@ import qualified Data.Set as Set
 import Prelude hiding (null,map,filter,filter,until,repeat,cycle,scanl,span,break,either,foldl)
 import Data.Maybe
 import Control.Monad
-import qualified Memo as Memo
 
 -- Imports just for memo function:
 import System.IO.Unsafe
