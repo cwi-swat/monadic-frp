@@ -108,16 +108,18 @@ inside :: Point -> Rect -> Bool
   x >= lx && x <= rx && y >= uy && y <= dy
 
 
-firstPoint :: Reactg (Maybe Point) 
-firstPoint = mousePos `at` leftClick
-
+firstPoint :: Reactg Point 
+firstPoint = do r <- mousePos `at` leftClick
+                case r of
+                  Just a -> return a
+                  Nothing -> firstPoint
 
 completeRect :: Point -> Sigg Rect (Maybe Rect)
 completeRect p1 = do  (r,_) <- curRect p1 `until` leftUp
                       return (cur r)
 
 defineRect :: Sigg Rect Rect
-defineRect = do  Just p1  <-  waitFor firstPoint
+defineRect = do  p1  <-  waitFor firstPoint
                  r <- completeRect p1 -- slight difference with paper: if the user does not move the mouse the pattern match will fail (this would define an empty rectangle) here we fix this.
                  case r of 
                    Just r -> return r
