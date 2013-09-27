@@ -62,7 +62,7 @@ drawBoxes s l =
 
 interpretBoxes (x,y) r = 
   do SDL.init [InitEverything]
-     setVideoMode (floor x) (floor y) 32 [DoubleBuf,Fullscreen]
+     setVideoMode (floor x) (floor y) 32 [DoubleBuf]
      screen <- getVideoSurface
      t <- curTime
      let drawBoxes' r = lift (drawBoxes screen r)
